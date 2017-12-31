@@ -2,9 +2,7 @@ package BenTrapani.CryptoArbitrage;
 
 import org.knowm.xchange.currency.CurrencyPair;
 
-import info.bitrich.xchangestream.bitstamp.BitstampStreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchange;
-import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.disposables.Disposable;
 
 public class CryptoArbitrageManager {
