@@ -8,23 +8,30 @@ import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 import io.reactivex.disposables.Disposable;
 
 public class CryptoArbitrageManager {
-	private StreamingExchange exchange = StreamingExchangeFactory.INSTANCE.createExchange(BitstampStreamingExchange.class.getName());
-	private Disposable subscription = null; 
+	private Disposable[] subscriptions; 
+	private StreamingExchange[] exchanges;
+	private OrderBookAggregator orderBookAggregator = new OrderBookAggregator();
 	
-	public CryptoArbitrageManager() {
-		exchange.connect().blockingAwait();
+	public CryptoArbitrageManager(StreamingExchange[] exchanges) {
+		subscriptions = new Disposable[exchanges.length];
+		for (StreamingExchange exchange: exchanges) {
+			exchange.connect().blockingAwait();
+		}
+		this.exchanges = exchanges.clone();
 	}
 	
 	public void startArbitrage() {
-		subscription = exchange.getStreamingMarketDataService()
-                .getOrderBook(CurrencyPair.BTC_USD)
-                .subscribe(orderBook -> {
-                     System.out.println(orderBook.getBids());
-                     System.out.println(orderBook.getAsks());
-                });
+		for (int i = 0; i < exchanges.length; i++) {
+			if (subscriptions[i] != null) {
+				subscriptions[i].dispose();
+			}
+			subscriptions[i] = orderBookAggregator.createConsumerForExchange(exchanges[i]);
+		}
 	}
 	
 	public void stopArbitrage() {
-		subscription.dispose();
+		for (int i = 0; i < subscriptions.length; i++) {
+			subscriptions[i].dispose();
+		}
 	}
 }
