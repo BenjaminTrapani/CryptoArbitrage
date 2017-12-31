@@ -1,17 +1,21 @@
 package BenTrapani.CryptoArbitrage;
 
-import org.knowm.xchange.currency.CurrencyPair;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.LinkedList;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.disposables.Disposable;
 
 public class CryptoArbitrageManager {
-	private Disposable[] subscriptions; 
+	private ArrayList<Disposable> subscriptions; 
 	private StreamingExchange[] exchanges;
-	private OrderBookAggregator orderBookAggregator = new OrderBookAggregator();
+	private OrderGraph orderGraph = new OrderGraph();
+	private OrderBookAggregator orderBookAggregator = new OrderBookAggregator(orderGraph);
 	
 	public CryptoArbitrageManager(StreamingExchange[] exchanges) {
-		subscriptions = new Disposable[exchanges.length];
+		subscriptions = new ArrayList<Disposable>(exchanges.length);
 		for (StreamingExchange exchange: exchanges) {
 			exchange.connect().blockingAwait();
 		}
@@ -19,17 +23,17 @@ public class CryptoArbitrageManager {
 	}
 	
 	public void startArbitrage() {
+		stopArbitrage();
 		for (int i = 0; i < exchanges.length; i++) {
-			if (subscriptions[i] != null) {
-				subscriptions[i].dispose();
-			}
-			subscriptions[i] = orderBookAggregator.createConsumerForExchange(exchanges[i]);
+			Disposable[] tempDisposables = orderBookAggregator.createConsumerForExchange(exchanges[i]);
+			List<Disposable> subsList = new LinkedList<Disposable>(Arrays.asList(tempDisposables));
+			subscriptions.addAll(subsList);
 		}
 	}
 	
 	public void stopArbitrage() {
-		for (int i = 0; i < subscriptions.length; i++) {
-			subscriptions[i].dispose();
+		for (Disposable disp: subscriptions) {
+			disp.dispose();
 		}
 	}
 }

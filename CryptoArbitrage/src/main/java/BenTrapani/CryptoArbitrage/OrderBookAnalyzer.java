@@ -14,39 +14,6 @@ public class OrderBookAnalyzer {
 		this.orderBookAggregator = orderBookAggregator;
 	}
 	
-	class CurrencyGraphNodeEdge {
-		public final Currency nextCurrency;
-		public final String exchangeName;
-		public final double priceRatio;
-		public CurrencyGraphNodeEdge(Currency nextCur, String exchangeName, double priceRatio) {
-			this.nextCurrency = nextCur;
-			this.exchangeName = exchangeName;
-			this.priceRatio = priceRatio;
-		}
-	}
-	class CurrencyGraphNode {
-		public final Currency curCurrency;
-		public HashSet<CurrencyGraphNodeEdge> nextCurrencies = new HashSet<CurrencyGraphNodeEdge>();
-		
-		public CurrencyGraphNode(Currency currency) {
-			this.curCurrency = currency;
-		}
-	}
-	
-	private void buildCurrencyGraphWithRoot(CurrencyGraphNode initialNode, 
-			Hashtable<OrderBookAggregator.AggregateOrderBookKey, OrderBook> orderBookPerCurrencyExchange) {
-		
-	}
-	private CurrencyGraphNode buildCurrencyGraph(Hashtable<OrderBookAggregator.AggregateOrderBookKey, 
-			OrderBook> orderBookPerCurrencyExchange) {
-		if (orderBookPerCurrencyExchange.size() == 0) {
-			throw new IllegalArgumentException("Order book must contain at least one entry in order to build currency graph");
-		}
-		OrderBookAggregator.AggregateOrderBookKey randomKey = orderBookPerCurrencyExchange.keys().nextElement();
-		CurrencyGraphNode initialNode = new CurrencyGraphNode(randomKey.getCurrencyPair().base);
-		
-		return initialNode;
-	}
 	// Only analyze simple one-hop arbitrage. 
 	// TODO check for multi-step arbitrage opportunities (A->B + B->C != A->C)
 	// TODO write a function that gets the min and max paths between currencies A and C (buy least and most of C with A)
@@ -56,7 +23,7 @@ public class OrderBookAnalyzer {
 	// Buy arbitrary initial A, and sell amount of C obtained via conversion from A -> C. Buy or sell full
 	// quantity after most recent hop through all intermediate nodes.
 	private void searchForArbitrage() {
-		
+		//Wait on semaphore here before processing graph. Post semaphor on order book change in order book aggregator.
 	}
 	
 	//Make this event-driven: issue an event in OrderBookAggregator and perform 
