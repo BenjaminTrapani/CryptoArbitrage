@@ -12,13 +12,15 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+   <maven.compiler.source>1.8</maven.compiler.source>
+   <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>3.8.1</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -33,7 +35,12 @@
 	</dependency>
     <dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
-    	<artifactId>xchange-okcoin</artifactId>
+    	<artifactId>xchange-poloniex</artifactId>
+    	<version>4.3.1</version>
+	</dependency>
+	<dependency>
+    	<groupId>info.bitrich.xchange-stream</groupId>
+    	<artifactId>xchange-gdax</artifactId>
     	<version>4.3.1</version>
 	</dependency>
 	
