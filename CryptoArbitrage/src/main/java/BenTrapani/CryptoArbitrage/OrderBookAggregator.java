@@ -5,7 +5,6 @@ import io.reactivex.disposables.Disposable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -25,8 +24,8 @@ public class OrderBookAggregator {
 	}
 	
 	private class OneSidedOrderBookDiff {
-		private List<LimitOrder> additions = new LinkedList<LimitOrder>();
-		private List<LimitOrder> deletions = new LinkedList<LimitOrder>();
+		private List<LimitOrder> additions = new ArrayList<LimitOrder>();
+		private List<LimitOrder> deletions = new ArrayList<LimitOrder>();
 		
 		public OneSidedOrderBookDiff(List<LimitOrder> source, List<LimitOrder> dest) {
 			HashSet<LimitOrder> sourceSet = new HashSet<LimitOrder>(source);
@@ -64,12 +63,12 @@ public class OrderBookAggregator {
 		}
 		
 		public List<LimitOrder> getAdditions() {
-			LinkedList<LimitOrder> allAdditions = new LinkedList<LimitOrder>(buyDiffs.getAdditions());
+			List<LimitOrder> allAdditions = new ArrayList<LimitOrder>(buyDiffs.getAdditions());
 			allAdditions.addAll(sellDiffs.getAdditions());
 			return allAdditions;
 		}
 		public List<LimitOrder> getDeletions() {
-			LinkedList<LimitOrder> allDeletions = new LinkedList<LimitOrder>(buyDiffs.getDeletions());
+			List<LimitOrder> allDeletions = new ArrayList<LimitOrder>(buyDiffs.getDeletions());
 			allDeletions.addAll(sellDiffs.getDeletions());
 			return allDeletions;
 		}
@@ -93,14 +92,14 @@ public class OrderBookAggregator {
 		Disposable[] disposablesPerCurrency = new Disposable[currenciesForExchange.size()];
 		int idx = 0;
 		for (CurrencyPair currencyPair: currenciesForExchange) {
-			OrderBook initialOrderBook = new OrderBook(new Date(), new LinkedList<LimitOrder>(), new LinkedList<LimitOrder>());
+			OrderBook initialOrderBook = new OrderBook(new Date(), new ArrayList<LimitOrder>(), new ArrayList<LimitOrder>());
 			prevOrderBooks.add(initialOrderBook);
 			final int prevOrderBookIdx = idx;
 			System.out.println("Exchange " + exchangeName + " Subscribing to " + currencyPair);
 			disposablesPerCurrency[idx] = exchange.getStreamingMarketDataService()
 	        .getOrderBook(currencyPair)
 	        .subscribe(orderBook -> {
-	        	System.out.println(orderBook);
+	        	System.out.println(orderBook.toString());
 	        	OrderBookDiff diff = new OrderBookDiff(prevOrderBooks.get(prevOrderBookIdx), orderBook);
 	        	List<LimitOrder> deletions = diff.getDeletions();
 	        	List<LimitOrder> additions = diff.getAdditions();
@@ -120,6 +119,7 @@ public class OrderBookAggregator {
 	        				addition.getRemainingAmount(), addition.getLimitPrice());
 	        	}
 	        	prevOrderBooks.set(prevOrderBookIdx, orderBook);
+	        	System.out.println("Done processing order book update");
 	        });
 			++idx;
 		}
