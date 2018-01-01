@@ -23,7 +23,7 @@ public class OrderBookAggregator {
 		this.sharedOrderGraph = orderGraph;
 	}
 	
-	private class OneSidedOrderBookDiff {
+	protected static class OneSidedOrderBookDiff {
 		private List<LimitOrder> additions = new ArrayList<LimitOrder>();
 		private List<LimitOrder> deletions = new ArrayList<LimitOrder>();
 		
@@ -53,7 +53,7 @@ public class OrderBookAggregator {
 		}
 	}
 	
-	private class OrderBookDiff {
+	protected static class OrderBookDiff {
 		private OneSidedOrderBookDiff buyDiffs;
 		private OneSidedOrderBookDiff sellDiffs;
 		
