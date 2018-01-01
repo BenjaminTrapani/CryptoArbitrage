@@ -3,8 +3,14 @@ package BenTrapani.CryptoArbitrage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+
+import org.knowm.xchange.currency.CurrencyPair;
+
 import java.util.LinkedList;
 
+import info.bitrich.xchangestream.core.ProductSubscription;
+import info.bitrich.xchangestream.core.ProductSubscription.ProductSubscriptionBuilder;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.disposables.Disposable;
 
@@ -17,7 +23,12 @@ public class CryptoArbitrageManager {
 	public CryptoArbitrageManager(StreamingExchange[] exchanges) {
 		subscriptions = new ArrayList<Disposable>(exchanges.length);
 		for (StreamingExchange exchange: exchanges) {
-			exchange.connect().blockingAwait();
+			Set<CurrencyPair> currenciesForExchange = exchange.getExchangeMetaData().getCurrencyPairs().keySet();
+			ProductSubscriptionBuilder builder = ProductSubscription.create();
+			for (CurrencyPair currencyPair: currenciesForExchange) {
+				builder = builder.addOrderbook(currencyPair);
+			}
+			exchange.connect(builder.build()).blockingAwait();
 		}
 		this.exchanges = exchanges.clone();
 	}
