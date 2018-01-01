@@ -69,22 +69,38 @@ public class OrderGraph {
 		}
 	}
 	
+	private static class MutableCurrencyPair {
+		public Currency source;
+		public Currency dest;
+		public MutableCurrencyPair(Currency counter, Currency base, boolean isBuy) {
+			if (isBuy) {
+				source = counter;
+				dest = base;
+			}else {
+				source = base;
+				dest = counter;
+			}
+		}
+	}
+	
 	//Coarse locking on graphSet is used to avoid data races when updating graph
 	private Hashtable<Currency, Hashtable<GraphEdgeKey, GraphEdgeValue>> graphSet = new Hashtable<Currency, Hashtable<GraphEdgeKey, GraphEdgeValue>>();
 	
 	//Call this after clearing all edges for an exchange that received an update. Add edges for all orders.
-	public void addOrUpdateEdge(Currency source, 
-			Currency dest, 
+	public void addOrUpdateEdge(Currency counter, 
+			Currency base, 
 			String exchangeName, 
 			boolean isBuyOrder,
 			BigDecimal quantity, 
 			BigDecimal price) {
 		
-		GraphEdgeKey newKey = new GraphEdgeKey(exchangeName, dest, isBuyOrder);
+		MutableCurrencyPair currencyPair = new MutableCurrencyPair(counter, base, isBuyOrder);
+		GraphEdgeKey newKey = new GraphEdgeKey(exchangeName, currencyPair.dest, isBuyOrder);
 		GraphEdgeValue newValue = new GraphEdgeValue(quantity, price);
+		
 		synchronized(graphSet) {
-			if (graphSet.containsKey(source)) {
-				Hashtable<GraphEdgeKey, GraphEdgeValue> edgesHere = graphSet.get(source);
+			if (graphSet.containsKey(currencyPair.source)) {
+				Hashtable<GraphEdgeKey, GraphEdgeValue> edgesHere = graphSet.get(currencyPair.source);
 				if (edgesHere.containsKey(newKey)) {
 					// Edge already exists, just update it.
 					GraphEdgeValue valueForEdge = edgesHere.get(newKey);
@@ -96,30 +112,20 @@ public class OrderGraph {
 			}else {
 				Hashtable<GraphEdgeKey, GraphEdgeValue> newEdges = new Hashtable<GraphEdgeKey, GraphEdgeValue>();
 				newEdges.put(newKey, newValue);
-				graphSet.put(source, newEdges);
+				graphSet.put(currencyPair.source, newEdges);
 			}
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
-	public Hashtable<GraphEdgeKey, GraphEdgeValue> getEdges(Currency source) {
-		synchronized(graphSet){
-			Hashtable<GraphEdgeKey, GraphEdgeValue> edgesForCurrency = graphSet.get(source);
-			if (edgesForCurrency == null) {
-				return null;
-			}
-			return (Hashtable<GraphEdgeKey, GraphEdgeValue>) edgesForCurrency.clone();
-		}
-	}
-	
-	public boolean removeEdge(Currency source, 
-			Currency dest,
+	public boolean removeEdge(Currency counter, 
+			Currency base,
 			String exchangeName,
 			boolean isBuy) {
+		MutableCurrencyPair mutablePair = new MutableCurrencyPair(counter, base, isBuy);
 		synchronized(graphSet) { 
-			if (graphSet.containsKey(source)) {
-				GraphEdgeKey curKey = new GraphEdgeKey(exchangeName, dest, isBuy);
-				Hashtable<GraphEdgeKey, GraphEdgeValue> edgesHere = graphSet.get(source);
+			if (graphSet.containsKey(mutablePair.source)) {
+				GraphEdgeKey curKey = new GraphEdgeKey(exchangeName, mutablePair.dest, isBuy);
+				Hashtable<GraphEdgeKey, GraphEdgeValue> edgesHere = graphSet.get(mutablePair.source);
 				if (edgesHere.containsKey(curKey)){
 					edgesHere.remove(curKey);
 					return true;
@@ -127,5 +133,16 @@ public class OrderGraph {
 			}
 		}
 		return false;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public Hashtable<GraphEdgeKey, GraphEdgeValue> getEdges(Currency source) {
+		synchronized(graphSet){
+			Hashtable<GraphEdgeKey, GraphEdgeValue> edgesForCurrency = graphSet.get(source);
+			if (edgesForCurrency == null || edgesForCurrency.size() == 0) {
+				return null;
+			}
+			return (Hashtable<GraphEdgeKey, GraphEdgeValue>) edgesForCurrency.clone();
+		}
 	}
 }
