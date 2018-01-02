@@ -1,58 +1,43 @@
 package BenTrapani.CryptoArbitrage;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Hashtable;
 
 import org.knowm.xchange.currency.Currency;
 
 public class OrderGraph {
 	
-	public static class GraphEdgeKey {
+	public static class GraphEdge {
 		public final String exchangeName;
 		public final Currency destCurrency;
 		public final boolean isBuy;
+		public final BigDecimal quantity;
+		public final BigDecimal price;
 		
-		public GraphEdgeKey(String exchangeName, Currency destCurrency, boolean isBuy) {
+		public GraphEdge(String exchangeName, 
+				Currency destCurrency, 
+				boolean isBuy,
+				BigDecimal quantity,
+				BigDecimal price) {
 			this.exchangeName = exchangeName;
 			this.destCurrency = destCurrency;
 			this.isBuy = isBuy;
-		}
-		
-		@Override
-		public int hashCode() {
-			int exchangeHashCode = exchangeName.hashCode();
-			int currencyHashCode = destCurrency.hashCode();
-			int hash = 59 * exchangeHashCode + 29 * currencyHashCode + (this.isBuy ? 7 : 0);
-			return hash;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (obj == null) {
-				return false;
-			}
-			if (getClass() != obj.getClass()) {
-				return false;
-			}
-			final GraphEdgeKey other = (GraphEdgeKey) obj;
-			return exchangeName.compareTo(other.exchangeName) == 0 
-					&& destCurrency.equals(other.destCurrency) 
-					&& isBuy == other.isBuy;
-		}
-		
-	}
-	public static class GraphEdgeValue {
-		public BigDecimal quantity;
-		public BigDecimal price;
-		public GraphEdgeValue(BigDecimal quantity, BigDecimal price) {
 			this.quantity = quantity;
 			this.price = price;
 		}
+		
 		@Override
 		public int hashCode() {
-			int quantityHashCode = quantity.hashCode();
-			int priceHashCode = price.hashCode();
-			int hash = 59 * quantityHashCode + priceHashCode;
+			final int exchangeHashCode = exchangeName.hashCode();
+			final int currencyHashCode = destCurrency.hashCode();
+			final int quantityHashCode = quantity.hashCode();
+			final int priceHashCode = price.hashCode();
+			final int hash = 59 * exchangeHashCode + 
+					47 * currencyHashCode +
+					197 * quantityHashCode + 
+					163 * priceHashCode + 
+					(this.isBuy ? 797 : 0);
 			return hash;
 		}
 
@@ -64,9 +49,14 @@ public class OrderGraph {
 			if (getClass() != obj.getClass()) {
 				return false;
 			}
-			final GraphEdgeValue other = (GraphEdgeValue) obj;
-			return other.quantity.equals(quantity) && other.price.equals(price);
+			final GraphEdge other = (GraphEdge) obj;
+			return exchangeName.compareTo(other.exchangeName) == 0 
+					&& destCurrency.equals(other.destCurrency) 
+					&& isBuy == other.isBuy 
+					&& quantity.equals(other.quantity)
+					&& price.equals(other.price);
 		}
+		
 	}
 	
 	private static class MutableCurrencyPair {
@@ -84,10 +74,10 @@ public class OrderGraph {
 	}
 	
 	//Coarse locking on graphSet is used to avoid data races when updating graph
-	private Hashtable<Currency, Hashtable<GraphEdgeKey, GraphEdgeValue>> graphSet = new Hashtable<Currency, Hashtable<GraphEdgeKey, GraphEdgeValue>>();
+	private Hashtable<Currency, HashSet<GraphEdge>> graphSet = new Hashtable<Currency, HashSet<GraphEdge>>();
 	
 	//Call this after clearing all edges for an exchange that received an update. Add edges for all orders.
-	public void addOrUpdateEdge(Currency counter, 
+	public void addEdge(Currency counter, 
 			Currency base, 
 			String exchangeName, 
 			boolean isBuyOrder,
@@ -95,54 +85,42 @@ public class OrderGraph {
 			BigDecimal price) {
 		
 		MutableCurrencyPair currencyPair = new MutableCurrencyPair(counter, base, isBuyOrder);
-		GraphEdgeKey newKey = new GraphEdgeKey(exchangeName, currencyPair.dest, isBuyOrder);
-		GraphEdgeValue newValue = new GraphEdgeValue(quantity, price);
+		GraphEdge newEdge = new GraphEdge(exchangeName, currencyPair.dest, isBuyOrder, quantity, price);
 		
 		synchronized(graphSet) {
-			if (graphSet.containsKey(currencyPair.source)) {
-				Hashtable<GraphEdgeKey, GraphEdgeValue> edgesHere = graphSet.get(currencyPair.source);
-				if (edgesHere.containsKey(newKey)) {
-					// Edge already exists, just update it.
-					GraphEdgeValue valueForEdge = edgesHere.get(newKey);
-					valueForEdge.price = price;
-					valueForEdge.quantity = quantity;
-				}else {
-					edgesHere.put(newKey, newValue);
-				}
-			}else {
-				Hashtable<GraphEdgeKey, GraphEdgeValue> newEdges = new Hashtable<GraphEdgeKey, GraphEdgeValue>();
-				newEdges.put(newKey, newValue);
-				graphSet.put(currencyPair.source, newEdges);
+			if (!graphSet.containsKey(currencyPair.source)) {
+				graphSet.put(currencyPair.source, new HashSet<GraphEdge>());
 			}
+			HashSet<GraphEdge> edgesHere = graphSet.get(currencyPair.source);
+			edgesHere.add(newEdge);
 		}
 	}
 	
 	public boolean removeEdge(Currency counter, 
 			Currency base,
 			String exchangeName,
-			boolean isBuy) {
+			boolean isBuy, 
+			BigDecimal quantity,
+			BigDecimal price) {
 		MutableCurrencyPair mutablePair = new MutableCurrencyPair(counter, base, isBuy);
 		synchronized(graphSet) { 
 			if (graphSet.containsKey(mutablePair.source)) {
-				GraphEdgeKey curKey = new GraphEdgeKey(exchangeName, mutablePair.dest, isBuy);
-				Hashtable<GraphEdgeKey, GraphEdgeValue> edgesHere = graphSet.get(mutablePair.source);
-				if (edgesHere.containsKey(curKey)){
-					edgesHere.remove(curKey);
-					return true;
-				}
+				HashSet<GraphEdge> edgesHere = graphSet.get(mutablePair.source);
+				GraphEdge edgeToRemove = new GraphEdge(exchangeName, mutablePair.dest, isBuy, quantity, price);
+				return edgesHere.remove(edgeToRemove);
 			}
 		}
 		return false;
 	}
 	
 	@SuppressWarnings("unchecked")
-	public Hashtable<GraphEdgeKey, GraphEdgeValue> getEdges(Currency source) {
+	public HashSet<GraphEdge> getEdges(Currency source) {
 		synchronized(graphSet){
-			Hashtable<GraphEdgeKey, GraphEdgeValue> edgesForCurrency = graphSet.get(source);
+			HashSet<GraphEdge> edgesForCurrency = graphSet.get(source);
 			if (edgesForCurrency == null || edgesForCurrency.size() == 0) {
 				return null;
 			}
-			return (Hashtable<GraphEdgeKey, GraphEdgeValue>) edgesForCurrency.clone();
+			return (HashSet<GraphEdge>) edgesForCurrency.clone();
 		}
 	}
 }
