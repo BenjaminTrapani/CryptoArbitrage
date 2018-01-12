@@ -14,20 +14,20 @@ public class OrderGraphTest {
 	
 	@Test
 	public void testGraphEdge() {
-		GraphEdge graphEdge = new OrderGraph.GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(1), new BigDecimal(1000));
+		GraphEdge graphEdge = new OrderGraph.GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(1.0), new BigDecimal(1000.0));
 		
 		HashSet<OrderGraph.GraphEdge> testEdgeSet = new HashSet<OrderGraph.GraphEdge>();
 		testEdgeSet.add(graphEdge);
 		assertTrue(testEdgeSet.contains(graphEdge));
 		
-		GraphEdge graphEdgeDup = new OrderGraph.GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(1), new BigDecimal(1000));
+		GraphEdge graphEdgeDup = new OrderGraph.GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(1.0), new BigDecimal(1000.0));
 	    assertTrue(testEdgeSet.contains(graphEdgeDup));
 	    
-	    GraphEdge graphEdgeNot1 = new OrderGraph.GraphEdge("poloniexx", Currency.BTC, true, new BigDecimal(1), new BigDecimal(1000));
-	    GraphEdge graphEdgeNot2 = new OrderGraph.GraphEdge("poloniex", Currency.USD, true, new BigDecimal(1), new BigDecimal(1000));
-	    GraphEdge graphEdgeNot3 = new OrderGraph.GraphEdge("poloniex", Currency.BTC, false, new BigDecimal(1), new BigDecimal(1000));
-	    GraphEdge graphEdgeNot4 = new OrderGraph.GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(2), new BigDecimal(1000));
-	    GraphEdge graphEdgeNot5 = new OrderGraph.GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(1), new BigDecimal(1001));
+	    GraphEdge graphEdgeNot1 = new OrderGraph.GraphEdge("poloniexx", Currency.BTC, true, new BigDecimal(1.0), new BigDecimal(1000.0));
+	    GraphEdge graphEdgeNot2 = new OrderGraph.GraphEdge("poloniex", Currency.USD, true, new BigDecimal(1.0), new BigDecimal(1000.0));
+	    GraphEdge graphEdgeNot3 = new OrderGraph.GraphEdge("poloniex", Currency.BTC, false, new BigDecimal(1.0), new BigDecimal(1000.0));
+	    GraphEdge graphEdgeNot4 = new OrderGraph.GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(2.0), new BigDecimal(1000.0));
+	    GraphEdge graphEdgeNot5 = new OrderGraph.GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(1.0), new BigDecimal(1001.0));
 	    
 	    assertFalse(testEdgeSet.contains(graphEdgeNot1));
 	    assertFalse(testEdgeSet.contains(graphEdgeNot2));
@@ -42,6 +42,11 @@ public class OrderGraphTest {
 	    assertFalse(graphEdge.equals(graphEdgeNot3));
 	    assertFalse(graphEdge.equals(graphEdgeNot4));
 	    assertFalse(graphEdge.equals(graphEdgeNot5));
+	    
+	    assertEquals(graphEdgeNot2.quantity.divide(graphEdgeNot2.price).setScale(CryptoConfigs.decimalScale), 
+	    		graphEdgeNot2.ratio);
+	    assertEquals(graphEdgeNot3.price.divide(graphEdgeNot2.quantity).setScale(CryptoConfigs.decimalScale), 
+	    		graphEdgeNot3.ratio);
 	}
 	
 	@Test

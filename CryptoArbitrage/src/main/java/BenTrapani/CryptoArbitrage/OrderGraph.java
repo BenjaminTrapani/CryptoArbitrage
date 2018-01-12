@@ -14,6 +14,7 @@ public class OrderGraph {
 		public final boolean isBuy;
 		public final BigDecimal quantity;
 		public final BigDecimal price;
+		public final BigDecimal ratio;
 		
 		public GraphEdge(String exchangeName, 
 				Currency destCurrency, 
@@ -25,6 +26,8 @@ public class OrderGraph {
 			this.isBuy = isBuy;
 			this.quantity = quantity;
 			this.price = price;
+			this.ratio = isBuy ? quantity.divide(price, CryptoConfigs.decimalScale, BigDecimal.ROUND_HALF_UP) : 
+				price.divide(quantity, CryptoConfigs.decimalScale, BigDecimal.ROUND_HALF_UP);
 		}
 		
 		@Override
@@ -33,10 +36,12 @@ public class OrderGraph {
 			final int currencyHashCode = destCurrency.hashCode();
 			final int quantityHashCode = quantity.hashCode();
 			final int priceHashCode = price.hashCode();
+			final int ratioHashCode = ratio.hashCode();
 			final int hash = 59 * exchangeHashCode + 
 					47 * currencyHashCode +
 					197 * quantityHashCode + 
 					163 * priceHashCode + 
+					179 * ratioHashCode +
 					(this.isBuy ? 797 : 0);
 			return hash;
 		}
@@ -54,9 +59,9 @@ public class OrderGraph {
 					&& destCurrency.equals(other.destCurrency) 
 					&& isBuy == other.isBuy 
 					&& quantity.equals(other.quantity)
-					&& price.equals(other.price);
+					&& price.equals(other.price)
+					&& ratio.equals(other.ratio);
 		}
-		
 	}
 	
 	private static class MutableCurrencyPair {

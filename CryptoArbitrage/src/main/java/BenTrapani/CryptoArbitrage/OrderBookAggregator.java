@@ -75,7 +75,10 @@ public class OrderBookAggregator {
 			return allDeletions;
 		}
 	}
-
+	
+	private boolean getIsLimitOrderBuyForUs(LimitOrder order){
+		return order.getType() == OrderType.ASK;
+	}
 	// Edges are built from orders in the order book. Each edge contains an
 	// action (buy/sell),
 	// dest currency, price and quantity. Ratio can be derived by quantity /
@@ -110,7 +113,7 @@ public class OrderBookAggregator {
 				prevOrderBooks.add(initialOrderBook);
 			}
 			final int prevOrderBookIdx = idx;
-			System.out.println("Exchange " + exchangeName + " Subscribing to " + currencyPair);
+			System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
 			disposablesPerCurrency[idx] = exchange.getStreamingMarketDataService().getOrderBook(currencyPair)
 					.subscribe(orderBook -> {
 						OrderBookDiff diff;
@@ -121,7 +124,7 @@ public class OrderBookAggregator {
 						List<LimitOrder> additions = diff.getAdditions();
 						for (LimitOrder deletion : deletions) {
 							if (!sharedOrderGraph.removeEdge(deletion.getCurrencyPair().counter,
-									deletion.getCurrencyPair().base, exchangeName, deletion.getType() == OrderType.BID,
+									deletion.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(deletion),
 									deletion.getRemainingAmount(), deletion.getLimitPrice())) {
 								throw new IllegalStateException(
 										"Failed to remove edge that should have existed according to diff");
@@ -129,15 +132,12 @@ public class OrderBookAggregator {
 						}
 						for (LimitOrder addition : additions) {
 							sharedOrderGraph.addEdge(addition.getCurrencyPair().counter,
-									addition.getCurrencyPair().base, exchangeName, addition.getType() == OrderType.BID,
+									addition.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(addition),
 									addition.getRemainingAmount(), addition.getLimitPrice());
 						}
 						synchronized (prevOrderBooks) {
 							prevOrderBooks.set(prevOrderBookIdx, orderBook);
 						}
-						System.out.println(
-								"Done processing order book update on thread ID " + Thread.currentThread().getId());
-
 					});
 			idx++;
 		}
