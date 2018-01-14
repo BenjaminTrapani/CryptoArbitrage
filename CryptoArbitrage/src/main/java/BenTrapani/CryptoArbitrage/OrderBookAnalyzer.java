@@ -15,7 +15,7 @@ import BenTrapani.CryptoArbitrage.OrderGraph.TwoSidedGraphEdge;
 public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 	private OrderGraph sharedOrderGraph;
 	private Thread analyzerThread;
-	private Semaphore semaphore = new Semaphore(1);
+	private Semaphore semaphore = new Semaphore(0);
 	private Currency currencyToAccumulate;
 	private boolean shouldExit = false;
 	private OrderGraphAnalysisHandler analysisHandler;
