@@ -18,18 +18,28 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 	private Semaphore semaphore = new Semaphore(0);
 	private Currency currencyToAccumulate;
 	private boolean shouldExit = false;
+	private int maxTrades;
 	private OrderGraphAnalysisHandler analysisHandler;
 	
-	public OrderBookAnalyzer(OrderGraph sharedOrderGraph, Currency currencyToAccumulate, OrderGraphAnalysisHandler analysisHandler) {
+	public OrderBookAnalyzer(OrderGraph sharedOrderGraph, 
+			Currency currencyToAccumulate, 
+			int maxTrades, 
+			OrderGraphAnalysisHandler analysisHandler) {
 		this.sharedOrderGraph = sharedOrderGraph;
 		this.currencyToAccumulate = currencyToAccumulate;
+		if (maxTrades <= 0) {
+			throw new IllegalArgumentException("Cannot arbitrage with less than or equal to 0 allowed trades");
+		}
+		this.maxTrades = maxTrades;
 		this.analysisHandler = analysisHandler;
 	}
 	
 	protected static class SearchCacheKey {
 		// Instead of number of edges to here, the key should have the set of edges remaining that are children of currency
 		// Computing this is likely slower than the brute force approach, so probably use that instead of the DP solution.
-		// Brute force solution key will replace numberOfEdgesToHere with a hashset of visited edges so far.
+		// Brute force solution key will replace numberOfEdgesToHere with a hashset of visited edges so far. This approach 
+		// will catch a few repeated subproblems where same set of remaining edges needs to be evaluated and the order of
+		// previously visited edges is the same. 
 		public final HashSet<TwoSidedGraphEdge> edgesVisited;
 		public final Currency currency;
 		
@@ -107,13 +117,12 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 		public void expandSearchState(SearchState searchState) {
 			final boolean isDestNode = searchState.currency.equals(destNode) && searchState.parent != null;
 			final SearchCacheKey searchStateKey = new SearchCacheKey(searchState);
-			
 			if (maxRatioPerState.containsKey(searchStateKey) || 
 					isDestNode) {
 				if (searchState != sourceState) {
 					updateMaxForParent(searchState, isDestNode);
 				}
-			}else {
+			}else if (searchState.visitedEdges.size() < maxTrades){
 				maxRatioPerState.put(searchStateKey, sentinelRatio);
 				final HashSet<TwoSidedGraphEdge> edgesFromSource = sharedOrderGraph.getEdges(searchState.currency);
 				if (edgesFromSource != null) {

@@ -151,7 +151,7 @@ public class OrderBookAggregator {
 						}
 						
 						// Returns immediately and analysis starts running in another thread
-						//orderGraphChangeHandler.onOrderGraphChanged();
+						orderGraphChangeHandler.onOrderGraphChanged();
 						
 						synchronized (prevOrderBooks) {
 							prevOrderBooks.set(prevOrderBookIdx, orderBook);

@@ -97,7 +97,7 @@ public class OrderBookAnalyzerTest {
 	@Test
 	public void testSearchForArbitrageSimple() {
 		OrderGraph sharedOrderGraph = buildTestOrderGraph1();
-		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, new MockAnalysisHandler());
+		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 100, new MockAnalysisHandler());
 		AnalysisResult analysisResult = analyzer.searchForArbitrage();
 		assertTrue(bigDecimalsEqualWithTolerance(new BigDecimal(0.1 * 0.05 * 1000), 
 				analysisResult.maxRatio, 
@@ -107,12 +107,21 @@ public class OrderBookAnalyzerTest {
 		TwoSidedGraphEdge e3 = new TwoSidedGraphEdge(Currency.BTC, new GraphEdge("coinbase", Currency.USD, true, new BigDecimal(1000.0), new BigDecimal(1.0)));
 		HashSet<TwoSidedGraphEdge> expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e1, e2, e3}));
 		assertEquals(expectedTradesOnBestPath, analysisResult.tradesToExecute);
+		
+		OrderBookAnalyzer shortPathAnalyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 2, new MockAnalysisHandler());
+		analysisResult = shortPathAnalyzer.searchForArbitrage();
+		assertTrue(bigDecimalsEqualWithTolerance(new BigDecimal(1.0), 
+				analysisResult.maxRatio, 
+				new BigDecimal(0.0001)));
+		TwoSidedGraphEdge e4 = new TwoSidedGraphEdge(Currency.USD, new GraphEdge("coinbase", Currency.BTC, true, new BigDecimal(0.001), new BigDecimal(1.0)));
+		expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e3, e4}));
+		assertEquals(expectedTradesOnBestPath, analysisResult.tradesToExecute);
 	}
 	
 	@Test
 	public void testSearchForArbitrageMultiEquivalenceClassesPerCurrency(){
 		OrderGraph sharedOrderGraph = buildTestOrderGraph2();
-		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, new MockAnalysisHandler());
+		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 100, new MockAnalysisHandler());
 		AnalysisResult analysisResult = analyzer.searchForArbitrage();
 		BigDecimal expectedMaxRatio = new BigDecimal(0.5 * 0.7 * 2 * 100 * 1 * 100 * 0.03);
 		assertTrue(bigDecimalsEqualWithTolerance(expectedMaxRatio, analysisResult.maxRatio, new BigDecimal(0.0001)));
@@ -141,7 +150,7 @@ public class OrderBookAnalyzerTest {
 	@Test
 	public void testNoLoopSearch() {
 		OrderGraph sharedOrderGraph = buildLeafyTestGraph();
-		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, new MockAnalysisHandler());
+		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 100, new MockAnalysisHandler());
 		AnalysisResult analysisResult = analyzer.searchForArbitrage();
 		assertTrue(analysisResult.maxRatio.compareTo(new BigDecimal(0.0)) < 0);
 		assertNull(analysisResult.tradesToExecute);
