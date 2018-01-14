@@ -20,7 +20,7 @@ public class App
     	StreamingExchange bitstampExch = StreamingExchangeFactory.INSTANCE.createExchange(BitstampStreamingExchange.class.getName());
         StreamingExchange poloniexExch = StreamingExchangeFactory.INSTANCE.createExchange(PoloniexStreamingExchange.class.getName());
         StreamingExchange xchangeGdx = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
-    	CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{xchangeGdx});
+        CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{xchangeGdx, bitstampExch});
         manager.startArbitrage();
         
         boolean shouldExit = false;
