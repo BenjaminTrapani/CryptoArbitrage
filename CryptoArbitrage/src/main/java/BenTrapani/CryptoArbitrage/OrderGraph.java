@@ -8,7 +8,43 @@ import org.knowm.xchange.currency.Currency;
 
 public class OrderGraph {
 	
-	public static class GraphEdge {
+	public static class TwoSidedGraphEdge {
+		public final Currency sourceCurrency;
+		public final GraphEdge graphEdge;
+		public TwoSidedGraphEdge(Currency sourceCurrency, GraphEdge graphEdge) {
+			this.sourceCurrency = sourceCurrency;
+			this.graphEdge = graphEdge;
+		}
+		
+		@Override
+		public int hashCode() {
+			final int sourceCurrencyHashCode = sourceCurrency.hashCode();
+			final int graphEdgeHashCode = graphEdge.hashCode();
+			final int hash = 2039 * sourceCurrencyHashCode + graphEdgeHashCode;
+			return hash;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			final TwoSidedGraphEdge other = (TwoSidedGraphEdge) obj;
+			return sourceCurrency.equals(other.sourceCurrency)
+					&& graphEdge.equals(other.graphEdge);
+		}
+		
+		@Override
+		public String toString() {
+			String result = "sourceCurrency:" + sourceCurrency.toString() + graphEdge.toString();
+			return result;
+		}
+	}
+	
+	protected static class GraphEdge {
 		public final String exchangeName;
 		public final Currency destCurrency;
 		public final boolean isBuy;
@@ -26,8 +62,19 @@ public class OrderGraph {
 			this.isBuy = isBuy;
 			this.quantity = quantity;
 			this.price = price;
-			this.ratio = isBuy ? quantity.divide(price, CryptoConfigs.decimalScale, BigDecimal.ROUND_HALF_UP) : 
-				price.divide(quantity, CryptoConfigs.decimalScale, BigDecimal.ROUND_HALF_UP);
+			this.ratio = isBuy ? quantity.divide(price, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN) : 
+				price.divide(quantity, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
+		}
+		
+		@Override
+		public String toString() {
+			String result = " Exchange:" + exchangeName;
+			result += " dest:" + destCurrency;
+			result += " buy:" + isBuy;
+			result += " quantity:" + quantity.toString();
+			result += " price:" + price.toString();
+			result += " ratio:" + ratio.toString();
+			return result;
 		}
 		
 		@Override
@@ -65,8 +112,8 @@ public class OrderGraph {
 	}
 	
 	private static class MutableCurrencyPair {
-		public Currency source;
-		public Currency dest;
+		public final Currency source;
+		public final Currency dest;
 		public MutableCurrencyPair(Currency counter, Currency base, boolean isBuy) {
 			if (isBuy) {
 				source = counter;
@@ -117,15 +164,19 @@ public class OrderGraph {
 		}
 		return false;
 	}
-	
-	@SuppressWarnings("unchecked")
-	public HashSet<GraphEdge> getEdges(Currency source) {
+
+	public HashSet<TwoSidedGraphEdge> getEdges(Currency source) {
 		synchronized(graphSet){
 			HashSet<GraphEdge> edgesForCurrency = graphSet.get(source);
 			if (edgesForCurrency == null || edgesForCurrency.size() == 0) {
 				return null;
 			}
-			return (HashSet<GraphEdge>) edgesForCurrency.clone();
+			
+			HashSet<TwoSidedGraphEdge> result = new HashSet<TwoSidedGraphEdge>();
+			for (GraphEdge oldEdge: edgesForCurrency) {
+				result.add(new TwoSidedGraphEdge(source, oldEdge));
+			}
+			return result;
 		}
 	}
 }

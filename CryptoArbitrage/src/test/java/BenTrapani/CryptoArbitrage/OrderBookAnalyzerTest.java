@@ -3,43 +3,18 @@ package BenTrapani.CryptoArbitrage;
 import static org.junit.Assert.*;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.HashSet;
 
-import BenTrapani.CryptoArbitrage.OrderBookAnalyzer.SearchState;
-import BenTrapani.CryptoArbitrage.OrderGraph.GraphEdge;
 import BenTrapani.CryptoArbitrage.OrderBookAnalyzer;
+import BenTrapani.CryptoArbitrage.OrderBookAnalyzer.AnalysisResult;
+import BenTrapani.CryptoArbitrage.OrderGraph.TwoSidedGraphEdge;
+import BenTrapani.CryptoArbitrage.OrderGraph.GraphEdge;
 
 import org.junit.Test;
 import org.knowm.xchange.currency.Currency;
 
 public class OrderBookAnalyzerTest {
-
-	@Test
-	public void testSearchState() {
-		SearchState parent = new SearchState(Currency.USD, null, true, new BigDecimal(1.0), new HashSet<GraphEdge>());
-		SearchState parentDup = new SearchState(Currency.USD, null, true, new BigDecimal(1.0), new HashSet<GraphEdge>());
-		
-		SearchState s1 = new SearchState(Currency.BTC, parent, false, new BigDecimal(0.8), new HashSet<GraphEdge>());
-		SearchState s2 = new SearchState(Currency.LTC, parent, true, new BigDecimal(0.6), new HashSet<GraphEdge>());
-		SearchState s2Dup = new SearchState(Currency.LTC, parent, true, new BigDecimal(0.6), new HashSet<GraphEdge>());
-		SearchState s2DiffParent = new SearchState(Currency.LTC, parentDup, true, new BigDecimal(0.6), new HashSet<GraphEdge>());
-		SearchState s2DiffCurrency = new SearchState(Currency.AFN, parent, true, new BigDecimal(0.6), new HashSet<GraphEdge>());
-		SearchState s2DiffLastChild = new SearchState(Currency.AFN, parent, false, new BigDecimal(0.6), new HashSet<GraphEdge>());
-		SearchState s2DiffRatio = new SearchState(Currency.AFN, parent, true, new BigDecimal(0.7), new HashSet<GraphEdge>());
-		
-		assertEquals(s2, s2Dup);
-		assertEquals(s2.hashCode(), s2Dup.hashCode());
-		assertFalse(s2.equals(s1));
-		assertFalse(s2.hashCode() == s1.hashCode());
-		assertEquals(s2DiffParent, s2);
-		assertEquals(s2DiffParent.hashCode(), s2.hashCode());
-		assertFalse(s2DiffCurrency.equals(s2));
-		assertFalse(s2DiffCurrency.hashCode() == s2.hashCode());
-		assertFalse(s2DiffLastChild.equals(s2));
-		assertFalse(s2DiffLastChild.hashCode() == s2.hashCode());
-		assertFalse(s2DiffRatio.equals(s2));
-		assertFalse(s2DiffRatio.hashCode() == s2.hashCode());
-	}
 	
 	private static boolean bigDecimalsEqualWithTolerance(BigDecimal a, BigDecimal b, BigDecimal tolerance) {
 		return a.subtract(b).abs().compareTo(tolerance) < 0;
@@ -58,12 +33,12 @@ public class OrderBookAnalyzerTest {
 		 */
 		orderGraph.addEdge(Currency.USD, Currency.DGC, "poloniex", true, new BigDecimal(0.1), new BigDecimal(1.0));
 		orderGraph.addEdge(Currency.DGC, Currency.BTC, "gdax", true, new BigDecimal(0.05), new BigDecimal(1.0));
-		orderGraph.addEdge(Currency.BTC, Currency.USD, "coinbase", true, new BigDecimal(1000), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.BTC, Currency.USD, "coinbase", true, new BigDecimal(1000.0), new BigDecimal(1.0));
 		orderGraph.addEdge(Currency.USD, Currency.BTC, "coinbase", true, new BigDecimal(0.001), new BigDecimal(1.0));
 		return orderGraph;
 	}
 	
-	// Tests cached partial solutions (ETH)
+	// Tests cached partial solutions if implemented (ETH) and multiple equivalence classes otherwise
 	private OrderGraph buildTestOrderGraph2() {
 		OrderGraph orderGraph = new OrderGraph();
 		/*
@@ -77,20 +52,52 @@ public class OrderBookAnalyzerTest {
 		 *     \>    /      \    \     /
 		 *      DGC /          > XPM /
 		 */
-		orderGraph.addEdge(Currency.USD, Currency.DGC, "poloniex", true, new BigDecimal(0.1), new BigDecimal(1.0));
-		orderGraph.addEdge(Currency.DGC, Currency.BTC, "gdax", true, new BigDecimal(0.05), new BigDecimal(1.0));
-		orderGraph.addEdge(Currency.BTC, Currency.USD, "coinbase", true, new BigDecimal(1000), new BigDecimal(1.0));
-		orderGraph.addEdge(Currency.USD, Currency.BTC, "coinbase", true, new BigDecimal(0.001), new BigDecimal(1.0));
+		// Max loop to USD: USD -> DGC -> ETH -> BTC -> XRP -> ETH -> XPM -> ETH -> USD
+		orderGraph.addEdge(Currency.USD, Currency.LTC, "testExch", true, new BigDecimal(0.01), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.USD, Currency.DGC, "testExch", true, new BigDecimal(0.5), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.LTC, Currency.ETH, "testExch", true, new BigDecimal(0.5), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.DGC, Currency.ETH, "testExch", true, new BigDecimal(0.7), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.ETH, Currency.USD, "testExch", true, new BigDecimal(1.0), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.ETH, Currency.BTC, "testExch", true, new BigDecimal(2.0), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.ETH, Currency.XPM, "testExch", true, new BigDecimal(100.0), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.XPM, Currency.ETH, "testExch", true, new BigDecimal(0.03), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.XPM, Currency.XRP, "testExch", true, new BigDecimal(4.0), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.BTC, Currency.XRP, "testExch", true, new BigDecimal(100.0), new BigDecimal(1.0));
+		orderGraph.addEdge(Currency.XRP, Currency.ETH, "testExch", true, new BigDecimal(1.0), new BigDecimal(1.0));
 		return orderGraph;
 	}
 	
 	@Test
-	public void testSearchForArbitrage() {
+	public void testSearchForArbitrageSimple() {
 		OrderGraph sharedOrderGraph = buildTestOrderGraph1();
 		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD);
-		BigDecimal maxRatio = analyzer.searchForArbitrage();
+		AnalysisResult analysisResult = analyzer.searchForArbitrage();
 		assertTrue(bigDecimalsEqualWithTolerance(new BigDecimal(0.1 * 0.05 * 1000), 
-				maxRatio, 
-				new BigDecimal(0.01)));
+				analysisResult.maxRatio, 
+				new BigDecimal(0.0001)));
+		TwoSidedGraphEdge e1 = new TwoSidedGraphEdge(Currency.USD, new GraphEdge("poloniex", Currency.DGC, true, new BigDecimal(0.1), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e2 = new TwoSidedGraphEdge(Currency.DGC, new GraphEdge("gdax", Currency.BTC, true, new BigDecimal(0.05), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e3 = new TwoSidedGraphEdge(Currency.BTC, new GraphEdge("coinbase", Currency.USD, true, new BigDecimal(1000.0), new BigDecimal(1.0)));
+		HashSet<TwoSidedGraphEdge> expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e1, e2, e3}));
+		assertEquals(expectedTradesOnBestPath, analysisResult.tradesToExecute);
+	}
+	
+	@Test
+	public void testSearchForArbitrageMultiEquivalenceClassesPerCurrency(){
+		OrderGraph sharedOrderGraph = buildTestOrderGraph2();
+		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD);
+		AnalysisResult analysisResult = analyzer.searchForArbitrage();
+		BigDecimal expectedMaxRatio = new BigDecimal(0.5 * 0.7 * 2 * 100 * 1 * 100 * 0.03);
+		assertTrue(bigDecimalsEqualWithTolerance(expectedMaxRatio, analysisResult.maxRatio, new BigDecimal(0.0001)));
+		// Resulting trades should be as follows
+		// orderGraph.addEdge(Currency.USD, Currency.DGC, "testExch", true, new BigDecimal(0.5), new BigDecimal(1.0));
+		// orderGraph.addEdge(Currency.DGC, Currency.ETH, "testExch", true, new BigDecimal(0.7), new BigDecimal(1.0));
+		// orderGraph.addEdge(Currency.ETH, Currency.BTC, "testExch", true, new BigDecimal(2.0), new BigDecimal(1.0));
+		// orderGraph.addEdge(Currency.BTC, Currency.XRP, "testExch", true, new BigDecimal(100.0), new BigDecimal(1.0));
+		// orderGraph.addEdge(Currency.XRP, Currency.ETH, "testExch", true, new BigDecimal(1.0), new BigDecimal(1.0));
+		// orderGraph.addEdge(Currency.ETH, Currency.XPM, "testExch", true, new BigDecimal(100.0), new BigDecimal(1.0));
+		// orderGraph.addEdge(Currency.XPM, Currency.ETH, "testExch", true, new BigDecimal(0.03), new BigDecimal(1.0));
+		// orderGraph.addEdge(Currency.ETH, Currency.USD, "testExch", true, new BigDecimal(1.0), new BigDecimal(1.0));
+		
 	}
 }

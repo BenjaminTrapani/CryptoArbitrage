@@ -1,15 +1,16 @@
 package BenTrapani.CryptoArbitrage;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.Semaphore;
 
 import org.knowm.xchange.currency.Currency;
 
-import BenTrapani.CryptoArbitrage.OrderGraph.GraphEdge;
+import BenTrapani.CryptoArbitrage.OrderGraph.TwoSidedGraphEdge;
 
 public class OrderBookAnalyzer {
 	private OrderGraph sharedOrderGraph;
@@ -23,32 +24,22 @@ public class OrderBookAnalyzer {
 		this.currencyToAccumulate = currencyToAccumulate;
 	}
 	
-	protected static class SearchState {
+	protected static class SearchCacheKey {
+		// Instead of number of edges to here, the key should have the set of edges remaining that are children of currency
+		// Computing this is likely slower than the brute force approach, so probably use that instead of the DP solution.
+		// Brute force solution key will replace numberOfEdgesToHere with a hashset of visited edges so far.
+		public final HashSet<TwoSidedGraphEdge> edgesVisited;
 		public final Currency currency;
-		public final SearchState parent;
-		public final BigDecimal ratio;
-		public final HashSet<GraphEdge> visitedEdges;
 		
-		public SearchState(Currency currency, 
-				SearchState parent, 
-				boolean isLastChild,
-				BigDecimal ratio,
-				HashSet<GraphEdge> visitedEdges) {
-			this.currency = currency;
-			this.parent = parent;
-			this.ratio = ratio;
-			this.visitedEdges = visitedEdges;
+		@SuppressWarnings("unchecked")
+		public SearchCacheKey(SearchState searchState) {
+			this.edgesVisited = (HashSet<TwoSidedGraphEdge>) searchState.visitedEdges.clone();
+			this.currency = searchState.currency;
 		}
 		
-		// SearchStates are equal if their currency and ratio are deep equal
 		@Override
 		public int hashCode() {
-			final int currencyHashCode = currency.hashCode();
-			final int ratioHashCode = ratio.hashCode();
-			
-			final int hash = currencyHashCode + 
-					163 * ratioHashCode;
-			return hash;
+			return edgesVisited.hashCode() * 19203 + currency.hashCode();
 		}
 
 		@Override
@@ -59,18 +50,51 @@ public class OrderBookAnalyzer {
 			if (getClass() != obj.getClass()) {
 				return false;
 			}
-			final SearchState other = (SearchState) obj;
-			return currency.equals(other.currency) &&
-					ratio.equals(other.ratio);
+			final SearchCacheKey other = (SearchCacheKey) obj;
+			return edgesVisited.equals(other.edgesVisited) &&
+					currency.equals(other.currency);
 		}
+	}
+	
+	protected static class SearchState {
+		public final Currency currency;
+		public final SearchState parent;
+		public final BigDecimal ratio;
+		public final HashSet<TwoSidedGraphEdge> visitedEdges;
+		
+		public SearchState(Currency currency, 
+				SearchState parent, 
+				BigDecimal ratio,
+				HashSet<TwoSidedGraphEdge> visitedEdges) {
+			this.currency = currency;
+			this.parent = parent;
+			this.ratio = ratio;
+			this.visitedEdges = visitedEdges;
+		}
+	}
+	
+	public static class AnalysisResult implements Comparable<AnalysisResult> {
+		public final BigDecimal maxRatio;
+		public final HashSet<TwoSidedGraphEdge> tradesToExecute;
+		AnalysisResult(BigDecimal maxRatio, HashSet<TwoSidedGraphEdge> tradesToExecute) {
+			this.maxRatio = maxRatio;
+			this.tradesToExecute = tradesToExecute;
+		}
+		@Override
+		public int compareTo(AnalysisResult other) {
+			if (other == null) {
+				throw new IllegalArgumentException("Cannot compare to null object");
+			}
+			return maxRatio.compareTo(other.maxRatio);
+		}	
 	}
 	
 	protected class SearchContext {
 		private Stack<SearchState> searchStack = new Stack<SearchState>();
-		private Hashtable<SearchState, BigDecimal> maxRatioPerState = new Hashtable<SearchState, BigDecimal>();
+		private Hashtable<SearchCacheKey, AnalysisResult> maxRatioPerState = new Hashtable<SearchCacheKey, AnalysisResult>();
 		private Currency destNode;
 		private SearchState sourceState;
-		private final BigDecimal sentinelRatio = new BigDecimal(-1.0);
+		private final AnalysisResult sentinelRatio = new AnalysisResult(new BigDecimal(-1.0), null);
 		
 		public SearchContext(Currency destNode, SearchState sourceState){
 			this.destNode = destNode;
@@ -79,62 +103,72 @@ public class OrderBookAnalyzer {
 		}
 		
 		public void expandSearchState(SearchState searchState) {
-			final HashSet<GraphEdge> edgesFromSource = sharedOrderGraph.getEdges(searchState.currency);
+			final HashSet<TwoSidedGraphEdge> edgesFromSource = sharedOrderGraph.getEdges(searchState.currency);
 			final boolean isDestNode = searchState.currency.equals(destNode) && searchState.parent != null;
-			if ((maxRatioPerState.containsKey(searchState) && 
-					maxRatioPerState.get(searchState).compareTo(sentinelRatio) > 0) || 
+			final SearchCacheKey searchStateKey = new SearchCacheKey(searchState);
+			
+			if (maxRatioPerState.containsKey(searchStateKey) || 
 					isDestNode) {
 				if (searchState != sourceState) {
 					updateMaxForParent(searchState, isDestNode);
 				}
 			}else {
-				maxRatioPerState.put(searchState, sentinelRatio);
-				//Process this state again once maxRatioPerCurrency is complete
-				searchStack.push(searchState);
+				maxRatioPerState.put(searchStateKey, sentinelRatio);
 				
-				for (Iterator<GraphEdge> iter = edgesFromSource.iterator(); iter.hasNext();) {
-					GraphEdge edge = iter.next();
-					addEdgeToStackIfNotExists(searchState, edge, iter.hasNext());
+				List<SearchState> nextStates = new ArrayList<SearchState>(edgesFromSource.size());
+				for (TwoSidedGraphEdge edge: edgesFromSource) {
+					SearchState maybeNextState = getNextSearchStateIfNotEdgeExists(searchState, edge);
+					if (maybeNextState != null) {
+						nextStates.add(maybeNextState);
+					}
+				}
+				
+				if (nextStates.size() > 0) {
+					// Process this state again once children are expanded
+					searchStack.push(searchState);
+					for (SearchState nextState: nextStates){
+						searchStack.push(nextState);
+					}
 				}
 			}
 		}
 		
 		private void updateMaxForParent(SearchState child, boolean isDestNode) {
 			SearchState parent = child.parent;
+			SearchCacheKey parentKey = new SearchCacheKey(parent);
+			SearchCacheKey childKey = new SearchCacheKey(child);
+			
 			if (parent == null) {
 				throw new IllegalStateException("Parent of input child must be non-null to update its max");
 			}
-			if (!maxRatioPerState.containsKey(parent)){
+			if (!maxRatioPerState.containsKey(parentKey)){
 				throw new IllegalStateException("Parent must have max ratio cache initialized before children are processed");
 			}
-			if (!maxRatioPerState.containsKey(child) && !isDestNode) {
+			if (!maxRatioPerState.containsKey(childKey) && !isDestNode) {
 				throw new IllegalStateException("Child must have max ratio cache initialed before updating parent if not dest node");
 			}
 			
-			final BigDecimal prevMaxRatio = maxRatioPerState.get(parent);
-			final BigDecimal childMaxRatio = isDestNode? child.ratio : maxRatioPerState.get(child);
+			final AnalysisResult prevMaxRatio = maxRatioPerState.get(parentKey);
+			final AnalysisResult childMaxRatio = isDestNode? new AnalysisResult(child.ratio, child.visitedEdges) : maxRatioPerState.get(childKey);
 			
 			if (childMaxRatio.compareTo(prevMaxRatio) > 0) {
-				maxRatioPerState.put(parent, childMaxRatio);
+				maxRatioPerState.put(parentKey, childMaxRatio);
 			}
 		}
 		
-		private boolean addEdgeToStackIfNotExists(SearchState parent,
-				GraphEdge edge, 
-				boolean isLast) {
+		private SearchState getNextSearchStateIfNotEdgeExists(SearchState parent,
+				TwoSidedGraphEdge edge) {
 			// Cannot use the same edge twice because each edge represents a possible trade at the current point in time
 			if (!parent.visitedEdges.contains(edge)) {
 				@SuppressWarnings("unchecked")
-				HashSet<GraphEdge> newVisitedEdges = (HashSet<GraphEdge>) parent.visitedEdges.clone();
+				HashSet<TwoSidedGraphEdge> newVisitedEdges = (HashSet<TwoSidedGraphEdge>) parent.visitedEdges.clone();
 				newVisitedEdges.add(edge);
-				searchStack.push(new SearchState(edge.destCurrency, 
+				return new SearchState(edge.graphEdge.destCurrency, 
 						parent, 
-						isLast, 
-						edge.ratio.multiply(parent.ratio),
-						newVisitedEdges));
-				return true;
+						edge.graphEdge.ratio.multiply(parent.ratio),
+						newVisitedEdges);
 			}
-			return false;
+			return null;
 		}
 		
 		int getStackSize() {
@@ -144,20 +178,21 @@ public class OrderBookAnalyzer {
 			return searchStack.pop();
 		}
 		
-		public BigDecimal getMaxRatioForSource() {
-			return maxRatioPerState.get(sourceState);
+		public AnalysisResult getAnalysisResult() {
+			return maxRatioPerState.get(new SearchCacheKey(sourceState));
 		}
 	}
 	
-	protected BigDecimal searchForArbitrage() {
+	protected AnalysisResult searchForArbitrage() {
 		SearchContext searchCtx = new SearchContext(currencyToAccumulate, new SearchState(currencyToAccumulate, 
-				null, true, new BigDecimal(1.0), new HashSet<GraphEdge>()));
+				null, new BigDecimal(1.0), new HashSet<TwoSidedGraphEdge>()));
 		
 		while (searchCtx.getStackSize() > 0) {
 			SearchState curState = searchCtx.popStack();
 			searchCtx.expandSearchState(curState);
 		}
-		return searchCtx.getMaxRatioForSource();
+		
+		return searchCtx.getAnalysisResult();
 	}
 	
 	public void startAnalyzingOrderBook() {

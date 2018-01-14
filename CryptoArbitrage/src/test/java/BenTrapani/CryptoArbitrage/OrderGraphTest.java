@@ -9,6 +9,7 @@ import org.junit.Test;
 import org.knowm.xchange.currency.Currency;
 
 import BenTrapani.CryptoArbitrage.OrderGraph.GraphEdge;
+import BenTrapani.CryptoArbitrage.OrderGraph.TwoSidedGraphEdge;
 
 public class OrderGraphTest {
 	
@@ -49,6 +50,8 @@ public class OrderGraphTest {
 	    		graphEdgeNot3.ratio);
 	}
 	
+	//TODO add test for TwoSidedGraphEdge hashCode and equals functions
+	
 	@Test
 	public void testAddAndRemoveEdge() {
 		OrderGraph graph = new OrderGraph();
@@ -59,21 +62,22 @@ public class OrderGraphTest {
 		graph.addEdge(Currency.USD, Currency.BTC, "bitmex", true, new BigDecimal(4), new BigDecimal(750));
 		graph.addEdge(Currency.USD, Currency.DGC, "bitmex", false, new BigDecimal(4), new BigDecimal(750));
 		
-		HashSet<GraphEdge> edges = graph.getEdges(Currency.BTC);
+		HashSet<TwoSidedGraphEdge> edges = graph.getEdges(Currency.BTC);
 		assertNull(edges);
 		
 		edges = graph.getEdges(Currency.USD);
 		assertNotNull(edges);
 		assertEquals(2, edges.size());
-		GraphEdge e1 = new GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(2), new BigDecimal(1500));
-		GraphEdge e2 = new GraphEdge("bitmex", Currency.BTC, true, new BigDecimal(4), new BigDecimal(750));
+		TwoSidedGraphEdge e1 = new TwoSidedGraphEdge(Currency.USD, new GraphEdge("poloniex", Currency.BTC, true, new BigDecimal(2), new BigDecimal(1500)));
+		TwoSidedGraphEdge e2 = new TwoSidedGraphEdge(Currency.USD, new GraphEdge("bitmex", Currency.BTC, true, new BigDecimal(4), new BigDecimal(750)));
 		assertTrue(edges.contains(e1));
 		assertTrue(edges.contains(e2));
 		
 		edges = graph.getEdges(Currency.DGC);
 		assertNotNull(edges);
 		assertEquals(1, edges.size());
-		GraphEdge expectedDGCEdge = new GraphEdge("bitmex", Currency.USD, false, new BigDecimal(4), new BigDecimal(750));
+		TwoSidedGraphEdge expectedDGCEdge = new TwoSidedGraphEdge(Currency.DGC, 
+				new GraphEdge("bitmex", Currency.USD, false, new BigDecimal(4), new BigDecimal(750)));
 		assertTrue(edges.contains(expectedDGCEdge));
 		
 		assertTrue(graph.removeEdge(Currency.USD, Currency.DGC, "bitmex", false, new BigDecimal(4), new BigDecimal(750)));
