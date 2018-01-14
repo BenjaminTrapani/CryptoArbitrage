@@ -5,6 +5,7 @@ import io.reactivex.disposables.Disposable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Set;
 
@@ -18,7 +19,7 @@ import info.bitrich.xchangestream.core.StreamingExchange;
 public class OrderBookAggregator {
 	private OrderGraph sharedOrderGraph;
 	private OrderGraphChangeHandler orderGraphChangeHandler;
-	private ArrayList<OrderBook> prevOrderBooks = new ArrayList<OrderBook>();
+	private Hashtable<StreamingExchange, ArrayList<OrderBook>> prevOrderBooksMap = new Hashtable<StreamingExchange, ArrayList<OrderBook>>();
 
 	public OrderBookAggregator(OrderGraph orderGraph, OrderGraphChangeHandler orderGraphChangeHandler) {
 		this.sharedOrderGraph = orderGraph;
@@ -107,10 +108,16 @@ public class OrderBookAggregator {
 		String exchangeName = exchange.getExchangeSpecification().getExchangeName();
 		Set<CurrencyPair> currenciesForExchange = exchange.getExchangeMetaData().getCurrencyPairs().keySet();
 		Disposable[] disposablesPerCurrency = new Disposable[currenciesForExchange.size()];
+		
+		// Don't need to synchronize access to prevOrderBooksMap because each
+		// exchange only reads from its own key and Hashtable is thread-safe internally by default.
+		prevOrderBooksMap.put(exchange, new ArrayList<OrderBook>());
 		int idx = 0;
+		
 		for (CurrencyPair currencyPair : currenciesForExchange) {
 			OrderBook initialOrderBook = new OrderBook(new Date(), new ArrayList<LimitOrder>(),
 					new ArrayList<LimitOrder>());
+			ArrayList<OrderBook> prevOrderBooks = prevOrderBooksMap.get(exchange);
 			synchronized (prevOrderBooks) {
 				prevOrderBooks.add(initialOrderBook);
 			}
@@ -129,7 +136,11 @@ public class OrderBookAggregator {
 									deletion.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(deletion),
 									deletion.getRemainingAmount(), deletion.getLimitPrice())) {
 								throw new IllegalStateException(
-										"Failed to remove edge that should have existed according to diff");
+										"Failed to remove edge that should have existed according to diff: \n" +
+												" updating currency " + currencyPair.toString() + 
+												" for exchange " + exchangeName + 
+												" on thread " + Thread.currentThread().getId() + 
+												" with order book idx " + prevOrderBookIdx);
 							}
 						}
 						for (LimitOrder addition : additions) {
@@ -139,11 +150,15 @@ public class OrderBookAggregator {
 						}
 						
 						// Returns immediately and analysis starts running in another thread
-						orderGraphChangeHandler.onOrderGraphChanged();
+						//orderGraphChangeHandler.onOrderGraphChanged();
 						
 						synchronized (prevOrderBooks) {
 							prevOrderBooks.set(prevOrderBookIdx, orderBook);
 						}
+						System.out.println("Finished updating currency " + currencyPair.toString() + 
+								" for exchange " + exchangeName + 
+								" on thread " + Thread.currentThread().getId() +
+								" with order book idx " + prevOrderBookIdx);
 					});
 			idx++;
 		}
