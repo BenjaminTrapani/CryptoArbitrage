@@ -90,14 +90,24 @@ public class OrderBookAnalyzerTest {
 		BigDecimal expectedMaxRatio = new BigDecimal(0.5 * 0.7 * 2 * 100 * 1 * 100 * 0.03);
 		assertTrue(bigDecimalsEqualWithTolerance(expectedMaxRatio, analysisResult.maxRatio, new BigDecimal(0.0001)));
 		// Resulting trades should be as follows
-		// orderGraph.addEdge(Currency.USD, Currency.DGC, "testExch", true, new BigDecimal(0.5), new BigDecimal(1.0));
-		// orderGraph.addEdge(Currency.DGC, Currency.ETH, "testExch", true, new BigDecimal(0.7), new BigDecimal(1.0));
-		// orderGraph.addEdge(Currency.ETH, Currency.BTC, "testExch", true, new BigDecimal(2.0), new BigDecimal(1.0));
-		// orderGraph.addEdge(Currency.BTC, Currency.XRP, "testExch", true, new BigDecimal(100.0), new BigDecimal(1.0));
-		// orderGraph.addEdge(Currency.XRP, Currency.ETH, "testExch", true, new BigDecimal(1.0), new BigDecimal(1.0));
-		// orderGraph.addEdge(Currency.ETH, Currency.XPM, "testExch", true, new BigDecimal(100.0), new BigDecimal(1.0));
-		// orderGraph.addEdge(Currency.XPM, Currency.ETH, "testExch", true, new BigDecimal(0.03), new BigDecimal(1.0));
-		// orderGraph.addEdge(Currency.ETH, Currency.USD, "testExch", true, new BigDecimal(1.0), new BigDecimal(1.0));
-		
+		String testExch = "testExch";
+		TwoSidedGraphEdge e1 = new TwoSidedGraphEdge(Currency.USD, new GraphEdge(testExch, Currency.DGC, true, 
+				new BigDecimal(0.5), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e2 = new TwoSidedGraphEdge(Currency.DGC, new GraphEdge(testExch, Currency.ETH, true, 
+				new BigDecimal(0.7), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e3 = new TwoSidedGraphEdge(Currency.ETH, new GraphEdge(testExch, Currency.BTC, true, 
+				new BigDecimal(2.0), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e4 = new TwoSidedGraphEdge(Currency.BTC, new GraphEdge(testExch, Currency.XRP, true, 
+				new BigDecimal(100.0), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e5 = new TwoSidedGraphEdge(Currency.XRP, new GraphEdge(testExch, Currency.ETH, true, 
+				new BigDecimal(1.0), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e6 = new TwoSidedGraphEdge(Currency.ETH, new GraphEdge(testExch, Currency.XPM, true, 
+				new BigDecimal(100.0), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e7 = new TwoSidedGraphEdge(Currency.XPM, new GraphEdge(testExch, Currency.ETH, true, 
+				new BigDecimal(0.03), new BigDecimal(1.0)));
+		TwoSidedGraphEdge e8 = new TwoSidedGraphEdge(Currency.ETH, new GraphEdge(testExch, Currency.USD, true, 
+				new BigDecimal(1.0), new BigDecimal(1.0)));
+		HashSet<TwoSidedGraphEdge> expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e1, e2, e3, e4, e5, e6, e7, e8}));
+		assertEquals(expectedTradesOnBestPath, analysisResult.tradesToExecute);
 	}
 }
