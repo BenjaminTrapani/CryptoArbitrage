@@ -12,16 +12,18 @@ import org.knowm.xchange.currency.Currency;
 
 import BenTrapani.CryptoArbitrage.OrderGraph.TwoSidedGraphEdge;
 
-public class OrderBookAnalyzer {
+public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 	private OrderGraph sharedOrderGraph;
 	private Thread analyzerThread;
 	private Semaphore semaphore = new Semaphore(1);
-	private Currency currencyToAccumulate = Currency.USD;
+	private Currency currencyToAccumulate;
 	private boolean shouldExit = false;
+	private OrderGraphAnalysisHandler analysisHandler;
 	
-	public OrderBookAnalyzer(OrderGraph sharedOrderGraph, Currency currencyToAccumulate) {
+	public OrderBookAnalyzer(OrderGraph sharedOrderGraph, Currency currencyToAccumulate, OrderGraphAnalysisHandler analysisHandler) {
 		this.sharedOrderGraph = sharedOrderGraph;
 		this.currencyToAccumulate = currencyToAccumulate;
+		this.analysisHandler = analysisHandler;
 	}
 	
 	protected static class SearchCacheKey {
@@ -92,8 +94,8 @@ public class OrderBookAnalyzer {
 	protected class SearchContext {
 		private Stack<SearchState> searchStack = new Stack<SearchState>();
 		private Hashtable<SearchCacheKey, AnalysisResult> maxRatioPerState = new Hashtable<SearchCacheKey, AnalysisResult>();
-		private Currency destNode;
-		private SearchState sourceState;
+		private final Currency destNode;
+		private final SearchState sourceState;
 		private final AnalysisResult sentinelRatio = new AnalysisResult(new BigDecimal(-1.0), null);
 		
 		public SearchContext(Currency destNode, SearchState sourceState){
@@ -103,7 +105,6 @@ public class OrderBookAnalyzer {
 		}
 		
 		public void expandSearchState(SearchState searchState) {
-			final HashSet<TwoSidedGraphEdge> edgesFromSource = sharedOrderGraph.getEdges(searchState.currency);
 			final boolean isDestNode = searchState.currency.equals(destNode) && searchState.parent != null;
 			final SearchCacheKey searchStateKey = new SearchCacheKey(searchState);
 			
@@ -114,29 +115,31 @@ public class OrderBookAnalyzer {
 				}
 			}else {
 				maxRatioPerState.put(searchStateKey, sentinelRatio);
-				
-				List<SearchState> nextStates = new ArrayList<SearchState>(edgesFromSource.size());
-				for (TwoSidedGraphEdge edge: edgesFromSource) {
-					SearchState maybeNextState = getNextSearchStateIfNotEdgeExists(searchState, edge);
-					if (maybeNextState != null) {
-						nextStates.add(maybeNextState);
+				final HashSet<TwoSidedGraphEdge> edgesFromSource = sharedOrderGraph.getEdges(searchState.currency);
+				if (edgesFromSource != null) {
+					List<SearchState> nextStates = new ArrayList<SearchState>(edgesFromSource.size());
+					for (TwoSidedGraphEdge edge : edgesFromSource) {
+						SearchState maybeNextState = getNextSearchStateIfNotEdgeExists(searchState, edge);
+						if (maybeNextState != null) {
+							nextStates.add(maybeNextState);
+						}
 					}
-				}
-				
-				if (nextStates.size() > 0) {
-					// Process this state again once children are expanded
-					searchStack.push(searchState);
-					for (SearchState nextState: nextStates){
-						searchStack.push(nextState);
+
+					if (nextStates.size() > 0) {
+						// Process this state again once children are expanded
+						searchStack.push(searchState);
+						for (SearchState nextState : nextStates) {
+							searchStack.push(nextState);
+						}
 					}
 				}
 			}
 		}
 		
 		private void updateMaxForParent(SearchState child, boolean isDestNode) {
-			SearchState parent = child.parent;
-			SearchCacheKey parentKey = new SearchCacheKey(parent);
-			SearchCacheKey childKey = new SearchCacheKey(child);
+			final SearchState parent = child.parent;
+			final SearchCacheKey parentKey = new SearchCacheKey(parent);
+			final SearchCacheKey childKey = new SearchCacheKey(child);
 			
 			if (parent == null) {
 				throw new IllegalStateException("Parent of input child must be non-null to update its max");
@@ -195,6 +198,10 @@ public class OrderBookAnalyzer {
 		return searchCtx.getAnalysisResult();
 	}
 	
+	public void onOrderGraphChanged() {
+		semaphore.release();
+	}
+	
 	public void startAnalyzingOrderBook() {
 		if (analyzerThread == null) {
 			analyzerThread = new Thread() {
@@ -203,7 +210,7 @@ public class OrderBookAnalyzer {
 					while(!shouldExit) {
 						try {
 							semaphore.acquire();
-							searchForArbitrage();
+							analysisHandler.onOrderBookAnalysisComplete(searchForArbitrage());
 						} catch (InterruptedException e) {
 							shouldExit = true;
 						}

@@ -17,10 +17,12 @@ import info.bitrich.xchangestream.core.StreamingExchange;
 
 public class OrderBookAggregator {
 	private OrderGraph sharedOrderGraph;
+	private OrderGraphChangeHandler orderGraphChangeHandler;
 	private ArrayList<OrderBook> prevOrderBooks = new ArrayList<OrderBook>();
 
-	public OrderBookAggregator(OrderGraph orderGraph) {
+	public OrderBookAggregator(OrderGraph orderGraph, OrderGraphChangeHandler orderGraphChangeHandler) {
 		this.sharedOrderGraph = orderGraph;
+		this.orderGraphChangeHandler = orderGraphChangeHandler;
 	}
 
 	protected static class OneSidedOrderBookDiff {
@@ -135,6 +137,10 @@ public class OrderBookAggregator {
 									addition.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(addition),
 									addition.getRemainingAmount(), addition.getLimitPrice());
 						}
+						
+						// Returns immediately and analysis starts running in another thread
+						orderGraphChangeHandler.onOrderGraphChanged();
+						
 						synchronized (prevOrderBooks) {
 							prevOrderBooks.set(prevOrderBookIdx, orderBook);
 						}
