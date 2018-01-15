@@ -3,7 +3,7 @@ package BenTrapani.CryptoArbitrage;
 import io.reactivex.disposables.Disposable;
 
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -11,19 +11,47 @@ import java.util.Set;
 
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
-import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
 
 public class OrderBookAggregator {
+	
+	protected static class KBestOrders {
+		public final List<LimitOrder> kBestBids;
+		public final List<LimitOrder> kBestAsks;
+		
+		private static List<LimitOrder> sortAndTakeFirstK(List<LimitOrder> orders, int k) {
+			Collections.sort(orders);
+			if (k < orders.size()) {
+				orders = orders.subList(0, k);
+			}
+			return orders;
+		}
+		
+		public KBestOrders(List<LimitOrder> allBids, 
+				List<LimitOrder> allAsks,
+				final int maxBids,
+				final int maxAsks) {
+			this.kBestBids = sortAndTakeFirstK(allBids, maxBids);
+			this.kBestAsks = sortAndTakeFirstK(allAsks, maxAsks);
+		}
+	}
+	
 	private OrderGraph sharedOrderGraph;
 	private OrderGraphChangeHandler orderGraphChangeHandler;
-	private Hashtable<StreamingExchange, ArrayList<OrderBook>> prevOrderBooksMap = new Hashtable<StreamingExchange, ArrayList<OrderBook>>();
-
-	public OrderBookAggregator(OrderGraph orderGraph, OrderGraphChangeHandler orderGraphChangeHandler) {
+	private Hashtable<StreamingExchange, ArrayList<KBestOrders>> prevOrderBooksMap = new Hashtable<StreamingExchange, ArrayList<KBestOrders>>();
+	private final int numBestBids;
+	private final int numBestAsks;
+	
+	public OrderBookAggregator(OrderGraph orderGraph, 
+			OrderGraphChangeHandler orderGraphChangeHandler,
+			int numBestBids,
+			int numBestAsks) {
 		this.sharedOrderGraph = orderGraph;
 		this.orderGraphChangeHandler = orderGraphChangeHandler;
+		this.numBestBids = numBestBids;
+		this.numBestAsks = numBestAsks;
 	}
 
 	protected static class OneSidedOrderBookDiff {
@@ -60,10 +88,11 @@ public class OrderBookAggregator {
 	protected static class OrderBookDiff {
 		private OneSidedOrderBookDiff buyDiffs;
 		private OneSidedOrderBookDiff sellDiffs;
-
-		public OrderBookDiff(OrderBook source, OrderBook dest) {
-			buyDiffs = new OneSidedOrderBookDiff(source.getBids(), dest.getBids());
-			sellDiffs = new OneSidedOrderBookDiff(source.getAsks(), dest.getAsks());
+		
+		// Source expected to already be sorted
+		public OrderBookDiff(KBestOrders source, KBestOrders dest) {
+			buyDiffs = new OneSidedOrderBookDiff(source.kBestBids, dest.kBestBids);
+			sellDiffs = new OneSidedOrderBookDiff(source.kBestAsks, dest.kBestAsks);
 		}
 
 		public List<LimitOrder> getAdditions() {
@@ -82,6 +111,7 @@ public class OrderBookAggregator {
 	private boolean getIsLimitOrderBuyForUs(LimitOrder order){
 		return order.getType() == OrderType.ASK;
 	}
+	
 	// Edges are built from orders in the order book. Each edge contains an
 	// action (buy/sell),
 	// dest currency, price and quantity. Ratio can be derived by quantity /
@@ -112,13 +142,13 @@ public class OrderBookAggregator {
 		
 		// Don't need to synchronize access to prevOrderBooksMap because each
 		// exchange only reads from its own key and Hashtable is thread-safe internally by default.
-		prevOrderBooksMap.put(exchange, new ArrayList<OrderBook>());
+		prevOrderBooksMap.put(exchange, new ArrayList<KBestOrders>());
 		int idx = 0;
 		
 		for (CurrencyPair currencyPair : currenciesForExchange) {
-			OrderBook initialOrderBook = new OrderBook(new Date(), new ArrayList<LimitOrder>(),
-					new ArrayList<LimitOrder>());
-			ArrayList<OrderBook> prevOrderBooks = prevOrderBooksMap.get(exchange);
+			KBestOrders initialOrderBook = new KBestOrders(new ArrayList<LimitOrder>(), new ArrayList<LimitOrder>(),
+					numBestBids, numBestAsks);
+			ArrayList<KBestOrders> prevOrderBooks = prevOrderBooksMap.get(exchange);
 			synchronized (prevOrderBooks) {
 				prevOrderBooks.add(initialOrderBook);
 			}
@@ -126,9 +156,13 @@ public class OrderBookAggregator {
 			System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
 			disposablesPerCurrency[idx] = exchange.getStreamingMarketDataService().getOrderBook(currencyPair)
 					.subscribe(orderBook -> {
+						KBestOrders newKBest = new KBestOrders(orderBook.getBids(), 
+								orderBook.getAsks(), 
+								numBestBids,
+								numBestAsks);
 						OrderBookDiff diff;
 						synchronized (prevOrderBooks) {
-							diff = new OrderBookDiff(prevOrderBooks.get(prevOrderBookIdx), orderBook);
+							diff = new OrderBookDiff(prevOrderBooks.get(prevOrderBookIdx), newKBest);
 						}
 						List<LimitOrder> deletions = diff.getDeletions();
 						List<LimitOrder> additions = diff.getAdditions();
@@ -154,7 +188,7 @@ public class OrderBookAggregator {
 						orderGraphChangeHandler.onOrderGraphChanged();
 						
 						synchronized (prevOrderBooks) {
-							prevOrderBooks.set(prevOrderBookIdx, orderBook);
+							prevOrderBooks.set(prevOrderBookIdx, newKBest);
 						}
 						System.out.println("Finished updating currency " + currencyPair.toString() + 
 								" for exchange " + exchangeName + 

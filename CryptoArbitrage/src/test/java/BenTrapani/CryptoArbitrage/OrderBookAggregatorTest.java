@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -13,12 +14,62 @@ import java.util.Set;
 import org.junit.Test;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
-import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.trade.LimitOrder;
 
 import BenTrapani.CryptoArbitrage.OrderBookAggregator.OrderBookDiff;
+import BenTrapani.CryptoArbitrage.OrderBookAggregator.KBestOrders;
 
 public class OrderBookAggregatorTest {
+	@Test
+	public void testKBestOrders() {
+		Date sharedTimestamp = new Date();
+		List<LimitOrder> unorderedAsks = new ArrayList<LimitOrder>(Arrays.asList(new LimitOrder[]{
+				new LimitOrder(OrderType.ASK, new BigDecimal(2.0), CurrencyPair.BTC_USD, "id1", sharedTimestamp, new BigDecimal(2000.0)),
+				new LimitOrder(OrderType.ASK, new BigDecimal(1.0), CurrencyPair.BTC_USD, "id2", sharedTimestamp, new BigDecimal(2100.0)),
+				new LimitOrder(OrderType.ASK, new BigDecimal(4.0), CurrencyPair.BTC_USD, "id3", sharedTimestamp, new BigDecimal(1900.0)),
+				new LimitOrder(OrderType.ASK, new BigDecimal(8.0), CurrencyPair.BTC_USD, "id4", sharedTimestamp, new BigDecimal(1950.0)),
+		}));
+		List<LimitOrder> unorderedBids = new ArrayList<LimitOrder>(Arrays.asList(new LimitOrder[]{
+				new LimitOrder(OrderType.BID, new BigDecimal(3.0), CurrencyPair.BTC_USD, "id5", sharedTimestamp, new BigDecimal(2000.0)),
+				new LimitOrder(OrderType.BID, new BigDecimal(7.0), CurrencyPair.BTC_USD, "id6", sharedTimestamp, new BigDecimal(2100.0)),
+				new LimitOrder(OrderType.BID, new BigDecimal(11.0), CurrencyPair.BTC_USD, "id7", sharedTimestamp, new BigDecimal(1900.0)),
+				new LimitOrder(OrderType.BID, new BigDecimal(9.0), CurrencyPair.BTC_USD, "id8", sharedTimestamp, new BigDecimal(1950.0)),
+		}));
+		List<LimitOrder> expectedBestAsks = new ArrayList<LimitOrder>(Arrays.asList(new LimitOrder[]{
+				unorderedAsks.get(2),
+				unorderedAsks.get(3)
+		}));
+		List<LimitOrder> expectedBestBids = new ArrayList<LimitOrder>(Arrays.asList(new LimitOrder[]{
+				unorderedBids.get(1),
+				unorderedBids.get(0)
+		}));
+		
+		KBestOrders bestTwo = new KBestOrders(new ArrayList<LimitOrder>(unorderedBids), 
+				new ArrayList<LimitOrder>(unorderedAsks), 2, 2);
+		assertEquals(expectedBestAsks, bestTwo.kBestAsks);
+		assertEquals(expectedBestBids, bestTwo.kBestBids);
+		
+		KBestOrders twoBestAskOneBestBid = new KBestOrders(new ArrayList<LimitOrder>(unorderedBids),
+				new ArrayList<LimitOrder>(unorderedAsks), 1, 2);
+		assertEquals(expectedBestAsks, twoBestAskOneBestBid.kBestAsks);
+		assertEquals(expectedBestBids.subList(0, 1), twoBestAskOneBestBid.kBestBids);
+		
+		KBestOrders oneBestAskTwoBestBids = new KBestOrders(new ArrayList<LimitOrder>(unorderedBids),
+				new ArrayList<LimitOrder>(unorderedAsks), 2, 1);
+		assertEquals(expectedBestAsks.subList(0, 1), oneBestAskTwoBestBids.kBestAsks);
+		assertEquals(expectedBestBids, oneBestAskTwoBestBids.kBestBids);
+		
+		List<LimitOrder> sortedBids = new ArrayList<LimitOrder>(unorderedBids);
+		List<LimitOrder> sortedAsks = new ArrayList<LimitOrder>(unorderedAsks);
+		Collections.sort(sortedBids);
+		Collections.sort(sortedAsks);
+		KBestOrders allOrders = new KBestOrders(unorderedBids, unorderedAsks, 10, 10);
+		assertEquals(sortedBids, allOrders.kBestBids);
+		assertEquals(sortedAsks, allOrders.kBestAsks);
+		// Make sure that input lists to KBestOrders are sorted in place
+		assertEquals(sortedBids, unorderedBids);
+		assertEquals(sortedAsks, unorderedAsks);
+	}
 	
 	@Test
 	public void testOneSidedOrderBookDiff() {
@@ -114,8 +165,8 @@ public class OrderBookAggregatorTest {
 		List<LimitOrder> newBidsList = new ArrayList<LimitOrder>(Arrays.asList(newBids));
 		List<LimitOrder> newAsksList = new ArrayList<LimitOrder>(Arrays.asList(newAsks));
 		
-		OrderBook prevOrderBook = new OrderBook(sharedTimestamp, prevBidsList, prevAsksList);
-		OrderBook newOrderBook = new OrderBook(sharedTimestamp, newBidsList, newAsksList);
+		KBestOrders prevOrderBook = new KBestOrders(prevBidsList, prevAsksList, 2, 2);
+		KBestOrders newOrderBook = new KBestOrders(newBidsList, newAsksList, 2, 2);
 		
 		OrderBookDiff fullOrderBookDiff = new OrderBookDiff(prevOrderBook, newOrderBook);
 		List<LimitOrder> additions = fullOrderBookDiff.getAdditions();
