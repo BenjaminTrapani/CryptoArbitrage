@@ -154,5 +154,10 @@ public class OrderBookAnalyzerTest {
 		AnalysisResult analysisResult = analyzer.searchForArbitrage();
 		assertTrue(analysisResult.maxRatio.compareTo(new BigDecimal(0.0)) < 0);
 		assertNull(analysisResult.tradesToExecute);
+		
+		OrderBookAnalyzer noInitialCurrencyAnalyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.EUR, 100, new MockAnalysisHandler());
+		analysisResult = noInitialCurrencyAnalyzer.searchForArbitrage();
+		assertTrue(analysisResult.maxRatio.compareTo(new BigDecimal(0.0)) < 0);
+		assertNull(analysisResult.tradesToExecute);
 	}
 }

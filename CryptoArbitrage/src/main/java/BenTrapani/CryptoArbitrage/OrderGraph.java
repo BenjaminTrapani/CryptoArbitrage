@@ -6,7 +6,7 @@ import java.util.Hashtable;
 
 import org.knowm.xchange.currency.Currency;
 
-public class OrderGraph {
+public class OrderGraph implements Cloneable {
 	
 	public static class TwoSidedGraphEdge {
 		public final Currency sourceCurrency;
@@ -62,8 +62,7 @@ public class OrderGraph {
 			this.isBuy = isBuy;
 			this.quantity = quantity;
 			this.price = price;
-			this.ratio = isBuy ? quantity.divide(price, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN) : 
-				price.divide(quantity, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
+			this.ratio = isBuy ? BigDecimal.ONE.divide(price, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN) : price;
 		}
 		
 		@Override
@@ -126,7 +125,17 @@ public class OrderGraph {
 	}
 	
 	//Coarse locking on graphSet is used to avoid data races when updating graph
-	private Hashtable<Currency, HashSet<GraphEdge>> graphSet = new Hashtable<Currency, HashSet<GraphEdge>>();
+	private Hashtable<Currency, HashSet<GraphEdge>> graphSet;
+	
+	public OrderGraph(){
+		graphSet = new Hashtable<Currency, HashSet<GraphEdge>>();
+	}
+	public OrderGraph(Hashtable<Currency, HashSet<GraphEdge>> graphSet) {
+		if (graphSet == null) {
+			throw new IllegalArgumentException("initial graph set cannot be null in copy constructor for OrderGraph");
+		}
+		this.graphSet = graphSet;
+	}
 	
 	//Call this after clearing all edges for an exchange that received an update. Add edges for all orders.
 	public void addEdge(Currency counter, 
@@ -173,10 +182,22 @@ public class OrderGraph {
 			}
 			
 			HashSet<TwoSidedGraphEdge> result = new HashSet<TwoSidedGraphEdge>();
-			for (GraphEdge oldEdge: edgesForCurrency) {
-				result.add(new TwoSidedGraphEdge(source, oldEdge));
+			for (GraphEdge graphEdge: edgesForCurrency) {
+				result.add(new TwoSidedGraphEdge(source, graphEdge));
 			}
 			return result;
 		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public Object clone() {
+		Hashtable<Currency, HashSet<GraphEdge>> graphSetDup = new Hashtable<Currency, HashSet<GraphEdge>>();
+		synchronized(graphSet) {
+			for (Currency k: graphSet.keySet()) {
+				graphSetDup.put(k, (HashSet<GraphEdge>)graphSet.get(k).clone());
+			}
+		}
+		return new OrderGraph(graphSetDup);
 	}
 }

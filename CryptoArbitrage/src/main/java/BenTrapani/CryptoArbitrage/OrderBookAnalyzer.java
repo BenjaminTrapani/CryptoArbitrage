@@ -101,16 +101,23 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 		}	
 	}
 	
-	protected class SearchContext {
+	protected static class SearchContext {
 		private Stack<SearchState> searchStack = new Stack<SearchState>();
 		private Hashtable<SearchCacheKey, AnalysisResult> maxRatioPerState = new Hashtable<SearchCacheKey, AnalysisResult>();
 		private final Currency destNode;
 		private final SearchState sourceState;
 		private final AnalysisResult sentinelRatio = new AnalysisResult(new BigDecimal(-1.0), null);
+		private final OrderGraph orderGraphSnapshot;
+		private final int contextMaxTrades;
 		
-		public SearchContext(Currency destNode, SearchState sourceState){
+		public SearchContext(Currency destNode, 
+				SearchState sourceState, 
+				OrderGraph orderGraphSnapshot, 
+				int maxTrades){
 			this.destNode = destNode;
 			this.sourceState = sourceState;
+			this.orderGraphSnapshot = orderGraphSnapshot;
+			this.contextMaxTrades = maxTrades;
 			expandSearchState(sourceState);
 		}
 		
@@ -122,9 +129,9 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 				if (searchState != sourceState) {
 					updateMaxForParent(searchState, isDestNode);
 				}
-			}else if (searchState.visitedEdges.size() < maxTrades){
+			}else if (searchState.visitedEdges.size() < contextMaxTrades){
 				maxRatioPerState.put(searchStateKey, sentinelRatio);
-				final HashSet<TwoSidedGraphEdge> edgesFromSource = sharedOrderGraph.getEdges(searchState.currency);
+				final HashSet<TwoSidedGraphEdge> edgesFromSource = orderGraphSnapshot.getEdges(searchState.currency);
 				if (edgesFromSource != null) {
 					List<SearchState> nextStates = new ArrayList<SearchState>(edgesFromSource.size());
 					for (TwoSidedGraphEdge edge : edgesFromSource) {
@@ -197,7 +204,8 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 	
 	protected AnalysisResult searchForArbitrage() {
 		SearchContext searchCtx = new SearchContext(currencyToAccumulate, new SearchState(currencyToAccumulate, 
-				null, new BigDecimal(1.0), new HashSet<TwoSidedGraphEdge>()));
+				null, new BigDecimal(1.0), new HashSet<TwoSidedGraphEdge>()), 
+				(OrderGraph)sharedOrderGraph.clone(), maxTrades);
 		
 		while (searchCtx.getStackSize() > 0) {
 			SearchState curState = searchCtx.popStack();
