@@ -9,7 +9,7 @@ import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
 import info.bitrich.xchangestream.bitstamp.BitstampStreamingExchange;
 import info.bitrich.xchangestream.gdax.GDAXStreamingExchange;
 import info.bitrich.xchangestream.gemini.GeminiStreamingExchange;
-import info.bitrich.xchangestream.poloniex.PoloniexStreamingExchange;
+import info.bitrich.xchangestream.poloniex2.PoloniexStreamingExchange;
 
 /**
  * Hello world!
@@ -24,7 +24,8 @@ public class App
         StreamingExchange xchangeGdx = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
         StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
         StreamingExchange geminiExch = StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
-        CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{xchangeGdx, bitstampExch, bitfinexExch, geminiExch});
+        
+        CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{poloniexExch, xchangeGdx, bitstampExch, bitfinexExch, geminiExch});
         manager.startArbitrage();
         
         boolean shouldExit = false;

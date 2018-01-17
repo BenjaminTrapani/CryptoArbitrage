@@ -33,11 +33,6 @@
     	<artifactId>xchange-bitstamp</artifactId>
     	<version>4.3.1</version>
 	</dependency>
-    <dependency>
-    	<groupId>info.bitrich.xchange-stream</groupId>
-    	<artifactId>xchange-poloniex</artifactId>
-    	<version>4.3.1</version>
-	</dependency>
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-gdax</artifactId>
@@ -52,6 +47,11 @@
 		<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-gemini</artifactId>
     	<version>4.3.1</version>
+	</dependency>
+	<dependency>
+		<groupId>info.bitrich.xchange-stream</groupId>
+		<artifactId>xchange-poloniex2</artifactId>
+		<version>4.3.1</version>
 	</dependency>
 	
 	<dependency>
