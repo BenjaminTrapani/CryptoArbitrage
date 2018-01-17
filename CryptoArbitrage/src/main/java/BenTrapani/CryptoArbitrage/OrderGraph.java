@@ -62,6 +62,9 @@ public class OrderGraph implements Cloneable {
 			this.isBuy = isBuy;
 			this.quantity = quantity;
 			this.price = price;
+			// Price is specified in amount of counter per unit base. 
+			// If this is a buy order, we go counter -> base, so ratio is 1 / price.
+			// If this is a sell order, we go base -> counter, so ratio is price.
 			this.ratio = isBuy ? BigDecimal.ONE.divide(price, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN) : price;
 		}
 		
@@ -110,10 +113,10 @@ public class OrderGraph implements Cloneable {
 		}
 	}
 	
-	private static class MutableCurrencyPair {
+	private static class DirectedCurrencyPair {
 		public final Currency source;
 		public final Currency dest;
-		public MutableCurrencyPair(Currency counter, Currency base, boolean isBuy) {
+		public DirectedCurrencyPair(Currency counter, Currency base, boolean isBuy) {
 			if (isBuy) {
 				source = counter;
 				dest = base;
@@ -145,7 +148,7 @@ public class OrderGraph implements Cloneable {
 			BigDecimal quantity, 
 			BigDecimal price) {
 		
-		MutableCurrencyPair currencyPair = new MutableCurrencyPair(counter, base, isBuyOrder);
+		DirectedCurrencyPair currencyPair = new DirectedCurrencyPair(counter, base, isBuyOrder);
 		GraphEdge newEdge = new GraphEdge(exchangeName, currencyPair.dest, isBuyOrder, quantity, price);
 		
 		synchronized(graphSet) {
@@ -163,7 +166,7 @@ public class OrderGraph implements Cloneable {
 			boolean isBuy, 
 			BigDecimal quantity,
 			BigDecimal price) {
-		MutableCurrencyPair mutablePair = new MutableCurrencyPair(counter, base, isBuy);
+		DirectedCurrencyPair mutablePair = new DirectedCurrencyPair(counter, base, isBuy);
 		synchronized(graphSet) { 
 			if (graphSet.containsKey(mutablePair.source)) {
 				HashSet<GraphEdge> edgesHere = graphSet.get(mutablePair.source);
