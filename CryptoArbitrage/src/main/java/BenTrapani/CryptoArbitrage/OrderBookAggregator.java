@@ -190,10 +190,10 @@ public class OrderBookAggregator {
 						synchronized (prevOrderBooks) {
 							prevOrderBooks.set(prevOrderBookIdx, newKBest);
 						}
-						System.out.println("Finished updating currency " + currencyPair.toString() + 
+						/*System.out.println("Finished updating currency " + currencyPair.toString() + 
 								" for exchange " + exchangeName + 
 								" on thread " + Thread.currentThread().getId() +
-								" with order book idx " + prevOrderBookIdx);
+								" with order book idx " + prevOrderBookIdx);*/
 					});
 			idx++;
 		}

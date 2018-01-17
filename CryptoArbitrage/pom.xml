@@ -48,6 +48,11 @@
     	<artifactId>xchange-bitfinex</artifactId>
     	<version>4.3.1</version>
 	</dependency>
+	<dependency>
+		<groupId>info.bitrich.xchange-stream</groupId>
+    	<artifactId>xchange-gemini</artifactId>
+    	<version>4.3.1</version>
+	</dependency>
 	
 	<dependency>
        <groupId>org.slf4j</groupId>
