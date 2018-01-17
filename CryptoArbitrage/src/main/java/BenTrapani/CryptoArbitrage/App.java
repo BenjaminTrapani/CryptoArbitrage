@@ -2,10 +2,11 @@ package BenTrapani.CryptoArbitrage;
 
 import java.util.Scanner;
 
-import info.bitrich.xchangestream.bitstamp.BitstampStreamingExchange;
-
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
+
+import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
+import info.bitrich.xchangestream.bitstamp.BitstampStreamingExchange;
 import info.bitrich.xchangestream.gdax.GDAXStreamingExchange;
 import info.bitrich.xchangestream.poloniex.PoloniexStreamingExchange;
 
@@ -20,7 +21,8 @@ public class App
     	StreamingExchange bitstampExch = StreamingExchangeFactory.INSTANCE.createExchange(BitstampStreamingExchange.class.getName());
         StreamingExchange poloniexExch = StreamingExchangeFactory.INSTANCE.createExchange(PoloniexStreamingExchange.class.getName());
         StreamingExchange xchangeGdx = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
-        CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{xchangeGdx, bitstampExch});
+        StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
+        CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{xchangeGdx, bitstampExch, bitfinexExch});
         manager.startArbitrage();
         
         boolean shouldExit = false;
