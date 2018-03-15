@@ -1,0 +1,6 @@
+[submodule "CryptoArbitrage/deps/XChange"]
+	path = CryptoArbitrage/deps/XChange
+	url = https://github.com/BenjaminTrapani/XChange.git
+[submodule "CryptoArbitrage/deps/xchange-stream"]
+	path = CryptoArbitrage/deps/xchange-stream
+	url = https://github.com/BenjaminTrapani/xchange-stream.git
