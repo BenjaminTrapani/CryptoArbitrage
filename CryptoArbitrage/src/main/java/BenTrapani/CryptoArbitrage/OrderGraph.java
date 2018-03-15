@@ -52,6 +52,13 @@ public class OrderGraph implements Cloneable {
 		public final BigDecimal price;
 		public final BigDecimal ratio;
 		
+		// Quantity is specified in amount of base.
+		// Price is specified in amount of counter per unit base. 
+		// If this is a buy order, we go counter -> base, so ratio is 1 / price and quantity is in units destCurrency
+		// If this is a sell order, we go base -> counter, so ratio is price and quantity is in units sourceCurrency (defined outside of this class)
+		// TODO add dest quantity field that it is always in terms of destCurrency. 
+		// 	This way, dest quantity / ratio = amount destCurrency in terms of source currency, since ratio = quantity dest / quantity source
+		//  Quantity is always given in base. If sell, quantity * price = quantity counter = dest quantity, otherwise dest quantity = quantity.
 		public GraphEdge(String exchangeName, 
 				Currency destCurrency, 
 				boolean isBuy,
@@ -62,9 +69,6 @@ public class OrderGraph implements Cloneable {
 			this.isBuy = isBuy;
 			this.quantity = quantity;
 			this.price = price;
-			// Price is specified in amount of counter per unit base. 
-			// If this is a buy order, we go counter -> base, so ratio is 1 / price.
-			// If this is a sell order, we go base -> counter, so ratio is price.
 			this.ratio = isBuy ? BigDecimal.ONE.divide(price, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN) : price;
 		}
 		
