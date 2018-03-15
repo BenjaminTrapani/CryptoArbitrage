@@ -19,7 +19,7 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 			}
 			System.out.println("Profitable trade found with ratio " + analysisResult.maxRatio.toString() + "\n" + allTrades);
 		}else {
-			System.out.println("No profitable trade found");
+			System.out.println("No profitable trade found. Best ratio = " + analysisResult.maxRatio);
 		}
 	}
 }

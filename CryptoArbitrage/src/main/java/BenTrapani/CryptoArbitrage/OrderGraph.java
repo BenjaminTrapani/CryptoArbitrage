@@ -50,6 +50,7 @@ public class OrderGraph implements Cloneable {
 		public final boolean isBuy;
 		public final BigDecimal quantity;
 		public final BigDecimal price;
+		// Ratio is the amount of dest per unit source
 		public final BigDecimal ratio;
 		
 		// Quantity is specified in amount of base.
@@ -63,13 +64,15 @@ public class OrderGraph implements Cloneable {
 				Currency destCurrency, 
 				boolean isBuy,
 				BigDecimal quantity,
-				BigDecimal price) {
+				BigDecimal price,
+				BigDecimal feeFraction) {
 			this.exchangeName = exchangeName;
 			this.destCurrency = destCurrency;
 			this.isBuy = isBuy;
 			this.quantity = quantity;
 			this.price = price;
-			this.ratio = isBuy ? BigDecimal.ONE.divide(price, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN) : price;
+			BigDecimal unadjustedRatio = this.isBuy ? BigDecimal.ONE.divide(this.price, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN) : this.price;
+			this.ratio = unadjustedRatio.subtract(unadjustedRatio.multiply(feeFraction));
 		}
 		
 		@Override
@@ -150,10 +153,11 @@ public class OrderGraph implements Cloneable {
 			String exchangeName, 
 			boolean isBuyOrder,
 			BigDecimal quantity, 
-			BigDecimal price) {
+			BigDecimal price, 
+			BigDecimal feeFraction) {
 		
 		DirectedCurrencyPair currencyPair = new DirectedCurrencyPair(counter, base, isBuyOrder);
-		GraphEdge newEdge = new GraphEdge(exchangeName, currencyPair.dest, isBuyOrder, quantity, price);
+		GraphEdge newEdge = new GraphEdge(exchangeName, currencyPair.dest, isBuyOrder, quantity, price, feeFraction);
 		
 		synchronized(graphSet) {
 			if (!graphSet.containsKey(currencyPair.source)) {
@@ -169,12 +173,13 @@ public class OrderGraph implements Cloneable {
 			String exchangeName,
 			boolean isBuy, 
 			BigDecimal quantity,
-			BigDecimal price) {
+			BigDecimal price, 
+			BigDecimal feeFraction) {
 		DirectedCurrencyPair mutablePair = new DirectedCurrencyPair(counter, base, isBuy);
 		synchronized(graphSet) { 
 			if (graphSet.containsKey(mutablePair.source)) {
 				HashSet<GraphEdge> edgesHere = graphSet.get(mutablePair.source);
-				GraphEdge edgeToRemove = new GraphEdge(exchangeName, mutablePair.dest, isBuy, quantity, price);
+				GraphEdge edgeToRemove = new GraphEdge(exchangeName, mutablePair.dest, isBuy, quantity, price, feeFraction);
 				return edgesHere.remove(edgeToRemove);
 			}
 		}

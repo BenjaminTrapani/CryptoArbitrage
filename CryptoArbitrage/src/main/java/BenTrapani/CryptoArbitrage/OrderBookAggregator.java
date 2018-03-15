@@ -2,15 +2,18 @@ package BenTrapani.CryptoArbitrage;
 
 import io.reactivex.disposables.Disposable;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 
 import info.bitrich.xchangestream.core.StreamingExchange;
@@ -139,13 +142,22 @@ public class OrderBookAggregator {
 		String exchangeName = exchange.getExchangeSpecification().getExchangeName();
 		Set<CurrencyPair> currenciesForExchange = exchange.getExchangeMetaData().getCurrencyPairs().keySet();
 		Disposable[] disposablesPerCurrency = new Disposable[currenciesForExchange.size()];
-		
+		Map<CurrencyPair, CurrencyPairMetaData> currencyPairToMeta = exchange.getExchangeMetaData().getCurrencyPairs();
 		// Don't need to synchronize access to prevOrderBooksMap because each
 		// exchange only reads from its own key and Hashtable is thread-safe internally by default.
 		prevOrderBooksMap.put(exchange, new ArrayList<KBestOrders>());
 		int idx = 0;
 		
 		for (CurrencyPair currencyPair : currenciesForExchange) {
+			// feeToTrade is a fraction by volume taker fee (fraction expressed in dest currency)
+			BigDecimal feeToTrade = currencyPairToMeta.get(currencyPair).getTradingFee();
+			if (feeToTrade == null) {
+				throw new IllegalStateException("Could not get fee to trade for exchange " +
+												exchange.toString() + 
+												" and currency pair " + currencyPair.toString());
+			}
+			// TODO also account for min and max trade amounts
+			
 			KBestOrders initialOrderBook = new KBestOrders(new ArrayList<LimitOrder>(), new ArrayList<LimitOrder>(),
 					numBestBids, numBestAsks);
 			ArrayList<KBestOrders> prevOrderBooks = prevOrderBooksMap.get(exchange);
@@ -169,7 +181,7 @@ public class OrderBookAggregator {
 						for (LimitOrder deletion : deletions) {
 							if (!sharedOrderGraph.removeEdge(deletion.getCurrencyPair().counter,
 									deletion.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(deletion),
-									deletion.getRemainingAmount(), deletion.getLimitPrice())) {
+									deletion.getRemainingAmount(), deletion.getLimitPrice(), feeToTrade)) {
 								throw new IllegalStateException(
 										"Failed to remove edge that should have existed according to diff: \n" +
 												" updating currency " + currencyPair.toString() + 
@@ -181,7 +193,7 @@ public class OrderBookAggregator {
 						for (LimitOrder addition : additions) {
 							sharedOrderGraph.addEdge(addition.getCurrencyPair().counter,
 									addition.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(addition),
-									addition.getRemainingAmount(), addition.getLimitPrice());
+									addition.getRemainingAmount(), addition.getLimitPrice(), feeToTrade);
 						}
 						
 						// Returns immediately and analysis starts running in another thread
@@ -190,10 +202,6 @@ public class OrderBookAggregator {
 						synchronized (prevOrderBooks) {
 							prevOrderBooks.set(prevOrderBookIdx, newKBest);
 						}
-						/*System.out.println("Finished updating currency " + currencyPair.toString() + 
-								" for exchange " + exchangeName + 
-								" on thread " + Thread.currentThread().getId() +
-								" with order book idx " + prevOrderBookIdx);*/
 					});
 			idx++;
 		}
