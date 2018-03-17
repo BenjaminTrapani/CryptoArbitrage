@@ -23,35 +23,36 @@
       <version>4.12</version>
       <scope>test</scope>
     </dependency>
+    
     <dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-stream-core</artifactId>
-    	<version>4.3.1</version>
+    	<version>4.3.3-SNAPSHOT</version>
 	</dependency>
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-bitstamp</artifactId>
-    	<version>4.3.1</version>
+    	<version>4.3.3-SNAPSHOT</version>
 	</dependency>
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-gdax</artifactId>
-    	<version>4.3.1</version>
+    	<version>4.3.3-SNAPSHOT</version>
 	</dependency>
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-bitfinex</artifactId>
-    	<version>4.3.1</version>
+    	<version>4.3.3-SNAPSHOT</version>
 	</dependency>
 	<dependency>
 		<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-gemini</artifactId>
-    	<version>4.3.1</version>
+    	<version>4.3.3-SNAPSHOT</version>
 	</dependency>
 	<dependency>
 		<groupId>info.bitrich.xchange-stream</groupId>
 		<artifactId>xchange-poloniex2</artifactId>
-		<version>4.3.1</version>
+		<version>4.3.3-SNAPSHOT</version>
 	</dependency>
 	
 	<dependency>
