@@ -25,7 +25,7 @@ public class App
         StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
         StreamingExchange geminiExch = StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
         
-        CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{poloniexExch, /*xchangeGdx,*/ bitstampExch, /*bitfinexExch, geminiExch*/});
+        CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{poloniexExch, xchangeGdx, bitstampExch, /*bitfinexExch, geminiExch*/});
         manager.startArbitrage();
         
         boolean shouldExit = false;
