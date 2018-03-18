@@ -15,6 +15,43 @@
    <maven.compiler.source>1.8</maven.compiler.source>
    <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
+	
+	  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.1.0</version>
+        <configuration>
+          <!-- put your configurations here -->
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+      <!-- Build an executable JAR -->
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-jar-plugin</artifactId>
+      <version>3.0.2</version>
+      <configuration>
+        <archive>
+          <manifest>
+            <addClasspath>true</addClasspath>
+            <classpathPrefix>lib/</classpathPrefix>
+            <mainClass>BenTrapani.CryptoArbitrage.App</mainClass>
+          </manifest>
+        </archive>
+      </configuration>
+    </plugin>
+    </plugins>
+  </build>
+
 
   <dependencies>
     <dependency>
@@ -37,6 +74,11 @@
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-gdax</artifactId>
+    	<version>4.3.3-SNAPSHOT</version>
+	</dependency>
+	<dependency>
+    	<groupId>info.bitrich.xchange-stream</groupId>
+    	<artifactId>xchange-binance</artifactId>
     	<version>4.3.3-SNAPSHOT</version>
 	</dependency>
 	<dependency>
