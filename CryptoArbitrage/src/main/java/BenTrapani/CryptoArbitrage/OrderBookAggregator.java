@@ -43,7 +43,8 @@ public class OrderBookAggregator {
 	
 	private OrderGraph sharedOrderGraph;
 	private OrderGraphChangeHandler orderGraphChangeHandler;
-	private Hashtable<StreamingExchange, ArrayList<KBestOrders>> prevOrderBooksMap = new Hashtable<StreamingExchange, ArrayList<KBestOrders>>();
+	private Hashtable<StreamingExchangeSubset, ArrayList<KBestOrders>> prevOrderBooksMap = 
+			new Hashtable<StreamingExchangeSubset, ArrayList<KBestOrders>>();
 	private final int numBestBids;
 	private final int numBestAsks;
 	
@@ -138,11 +139,11 @@ public class OrderBookAggregator {
 	// If one or more trades fail, the allocation among currencies will become
 	// lopsided but an increase in source currency will still be observed (assuming that trades
 	// connected to and from source currency all succeed)
-	public Disposable[] createConsumerForExchange(StreamingExchange exchange) {
-		String exchangeName = exchange.getExchangeSpecification().getExchangeName();
-		Set<CurrencyPair> currenciesForExchange = exchange.getExchangeMetaData().getCurrencyPairs().keySet();
+	public Disposable[] createConsumerForExchange(StreamingExchangeSubset exchange) {
+		String exchangeName = exchange.getExchangeName();
+		Set<CurrencyPair> currenciesForExchange = exchange.getCurrencyPairs();
 		Disposable[] disposablesPerCurrency = new Disposable[currenciesForExchange.size()];
-		Map<CurrencyPair, CurrencyPairMetaData> currencyPairToMeta = exchange.getExchangeMetaData().getCurrencyPairs();
+		Map<CurrencyPair, CurrencyPairMetaData> currencyPairToMeta = exchange.getCurrencyPairMetadata();
 		// Don't need to synchronize access to prevOrderBooksMap because each
 		// exchange only reads from its own key and Hashtable is thread-safe internally by default.
 		prevOrderBooksMap.put(exchange, new ArrayList<KBestOrders>());
@@ -166,7 +167,7 @@ public class OrderBookAggregator {
 			}
 			final int prevOrderBookIdx = idx;
 			System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
-			disposablesPerCurrency[idx] = exchange.getStreamingMarketDataService().getOrderBook(currencyPair)
+			disposablesPerCurrency[idx] = exchange.getOrderBook(currencyPair)
 					.subscribe(orderBook -> {
 						KBestOrders newKBest = new KBestOrders(orderBook.getBids(), 
 								orderBook.getAsks(), 

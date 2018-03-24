@@ -15,21 +15,21 @@ import io.reactivex.disposables.Disposable;
 
 public class CryptoArbitrageManager {
 	private ArrayList<Disposable> subscriptions; 
-	private StreamingExchange[] exchanges;
+	private StreamingExchangeSubset[] exchanges;
 	private OrderGraph orderGraph = new OrderGraph();
 	private ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor();
 	private OrderBookAnalyzer orderBookAnalyzer = new OrderBookAnalyzer(orderGraph, Currency.USD, 4, arbitrageExecutor);
 	private OrderBookAggregator orderBookAggregator = new OrderBookAggregator(orderGraph, orderBookAnalyzer, 2, 2);
 	
-	public CryptoArbitrageManager(StreamingExchange[] exchanges) {
+	public CryptoArbitrageManager(StreamingExchangeSubset[] exchanges) {
 		subscriptions = new ArrayList<Disposable>(exchanges.length);
-		for (StreamingExchange exchange: exchanges) {
-			Set<CurrencyPair> currenciesForExchange = exchange.getExchangeMetaData().getCurrencyPairs().keySet();
+		for (StreamingExchangeSubset exchange: exchanges) {
+			Set<CurrencyPair> currenciesForExchange = exchange.getCurrencyPairs();
 			ProductSubscriptionBuilder builder = ProductSubscription.create();
 			for (CurrencyPair currencyPair: currenciesForExchange) {
 				builder = builder.addOrderbook(currencyPair);
 			}
-			exchange.connect(builder.build()).blockingAwait();
+			exchange.buildAndWait(builder);
 		}
 		this.exchanges = exchanges.clone();
 	}
