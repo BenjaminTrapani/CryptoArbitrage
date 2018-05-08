@@ -1,6 +1,7 @@
 package BenTrapani.CryptoArbitrage;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.CurrencyPair;
@@ -12,13 +13,13 @@ import info.bitrich.xchangestream.core.ProductSubscription.ProductSubscriptionBu
 import io.reactivex.Observable;
 
 public class PollingExchangeAdapter extends StreamingExchangeSubset {
-	private Thread pollingThread;
-	private boolean shouldExitPollingThread;
-	
+	private ArrayList<Thread> pollingThreads = new ArrayList<Thread>();
+	private boolean shouldPollingThreadsRun;
+
 	public PollingExchangeAdapter(Exchange exchange) {
 		super(exchange);
 	}
-	
+
 	/***
 	 * Intentionally skip this, as it is not needed for non-streaming exchange
 	 */
@@ -28,13 +29,15 @@ public class PollingExchangeAdapter extends StreamingExchangeSubset {
 
 	@Override
 	public Observable<OrderBook> getOrderBook(CurrencyPair currencyPair) {
+		shouldPollingThreadsRun = true;
 		RateLimit[] rateLimits = exchange.getExchangeMetaData().getPublicRateLimits();
-		long delayMillis = ExchangeMetaData.getPollDelayMillis(rateLimits);
-		shouldExitPollingThread = false;
+		int numCurrencyPairs = getCurrencyPairs().size();
+		// Multiply by numCurrencyPairs here because we will hit the API numCurrencyPairs times per delay interval
+		long delayMillis = ExchangeMetaData.getPollDelayMillis(rateLimits) * numCurrencyPairs;
 		return Observable.<OrderBook>create(e -> {
-			pollingThread = new Thread(){
-				public void run(){
-					while (!shouldExitPollingThread) {
+			Thread pollingThread = new Thread() {
+				public void run() {
+					while (shouldPollingThreadsRun) {
 						OrderBook orderBookSnapshot = null;
 						try {
 							orderBookSnapshot = exchange.getMarketDataService().getOrderBook(currencyPair);
@@ -49,16 +52,22 @@ public class PollingExchangeAdapter extends StreamingExchangeSubset {
 						long timeToSleep = delayMillis - (System.currentTimeMillis() - curTimeMillis) + 1;
 						try {
 							Thread.sleep(timeToSleep);
-						} catch (InterruptedException e) {
+						} catch (InterruptedException exception) {
 							// TODO Auto-generated catch block
-							e.printStackTrace();
+							exception.printStackTrace();
 						}
 					}
-			    }
+				}
 			};
+			pollingThreads.add(pollingThread);
+			pollingThread.start();
 		}).doOnDispose(() -> {
-			shouldExitPollingThread = true;
-			pollingThread.join();
+			shouldPollingThreadsRun = false;
+			for (Thread pollingThread : pollingThreads) {
+				pollingThread.join();
+			}
+		}).doOnError((Throwable t) -> {
+			System.out.println("Error in polling exchange: " + t.toString());
 		}).share();
 	}
 }

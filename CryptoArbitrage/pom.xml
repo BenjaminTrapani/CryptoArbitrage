@@ -68,11 +68,6 @@
 	</dependency>
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
-    	<artifactId>xchange-kraken</artifactId>
-    	<version>4.3.3-SNAPSHOT</version>
-	</dependency>
-	<dependency>
-    	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-gdax</artifactId>
     	<version>4.3.3-SNAPSHOT</version>
 	</dependency>

@@ -2,6 +2,10 @@ package BenTrapani.CryptoArbitrage;
 
 import java.util.Scanner;
 
+import org.knowm.xchange.Exchange;
+import org.knowm.xchange.ExchangeFactory;
+import org.knowm.xchange.kraken.KrakenExchange;
+
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
 
@@ -9,7 +13,6 @@ import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
 import info.bitrich.xchangestream.gdax.GDAXStreamingExchange;
 import info.bitrich.xchangestream.gemini.GeminiStreamingExchange;
 import info.bitrich.xchangestream.binance.BinanceStreamingExchange;
-import info.bitrich.xchangestream.kraken.KrakenStreamingExchange;
 
 /**
  * Hello world!
@@ -30,14 +33,15 @@ public class App
     	StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
     	StreamingExchange xchangeGdx = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
     	StreamingExchange geminiExch = StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
-    	StreamingExchange krakenExch = StreamingExchangeFactory.INSTANCE.createExchange(KrakenStreamingExchange.class.getName());
-    	
-        CryptoArbitrageManager manager = new CryptoArbitrageManager(new StreamingExchange[]{
-        		binanceExch, 
-        		bitfinexExch, 
-        		xchangeGdx, 
-        		geminiExch,
-        		krakenExch});
+    	Exchange krakenExchange = ExchangeFactory.INSTANCE.createExchange(KrakenExchange.class.getName());
+    	StreamingExchangeSubset[] exchangeSubsets = new StreamingExchangeSubset[]{
+    		//new StreamingExchangeAdapter(binanceExch),
+    		//new StreamingExchangeAdapter(bitfinexExch),
+    		//new StreamingExchangeAdapter(xchangeGdx),
+    		new StreamingExchangeAdapter(geminiExch),
+    		new PollingExchangeAdapter(krakenExchange)
+    	};
+        CryptoArbitrageManager manager = new CryptoArbitrageManager(exchangeSubsets);
         manager.startArbitrage();
         
         boolean shouldExit = false;

@@ -166,7 +166,7 @@ public class OrderBookAggregator {
 				prevOrderBooks.add(initialOrderBook);
 			}
 			final int prevOrderBookIdx = idx;
-			System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
+			//System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
 			disposablesPerCurrency[idx] = exchange.getOrderBook(currencyPair)
 					.subscribe(orderBook -> {
 						KBestOrders newKBest = new KBestOrders(orderBook.getBids(), 
@@ -177,6 +177,9 @@ public class OrderBookAggregator {
 						synchronized (prevOrderBooks) {
 							diff = new OrderBookDiff(prevOrderBooks.get(prevOrderBookIdx), newKBest);
 						}
+						
+						//System.out.println("Got order book update from exchange " + exchangeName);
+						
 						List<LimitOrder> deletions = diff.getDeletions();
 						List<LimitOrder> additions = diff.getAdditions();
 						for (LimitOrder deletion : deletions) {
