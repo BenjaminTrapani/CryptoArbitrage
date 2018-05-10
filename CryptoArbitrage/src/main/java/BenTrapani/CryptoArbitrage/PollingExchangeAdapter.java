@@ -59,12 +59,16 @@ public class PollingExchangeAdapter extends StreamingExchangeSubset {
 					}
 				}
 			};
-			pollingThreads.add(pollingThread);
+			synchronized(pollingThreads) {
+				pollingThreads.add(pollingThread);
+			}
 			pollingThread.start();
 		}).doOnDispose(() -> {
 			shouldPollingThreadsRun = false;
-			for (Thread pollingThread : pollingThreads) {
-				pollingThread.join();
+			synchronized(pollingThreads) {
+				for (Thread pollingThread : pollingThreads) {
+					pollingThread.join();
+				}
 			}
 		}).doOnError((Throwable t) -> {
 			System.out.println("Error in polling exchange: " + t.toString());

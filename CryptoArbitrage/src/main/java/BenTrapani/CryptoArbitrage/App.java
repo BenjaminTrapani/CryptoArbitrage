@@ -13,18 +13,15 @@ import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
 import info.bitrich.xchangestream.gdax.GDAXStreamingExchange;
 import info.bitrich.xchangestream.gemini.GeminiStreamingExchange;
 import info.bitrich.xchangestream.binance.BinanceStreamingExchange;
+import info.bitrich.xchangestream.hitbtc.HitbtcStreamingExchange;
 
-/**
- * Hello world!
- *
- */
 public class App 
 {
     public static void main( String[] args )
     {
     	// Binance (done)
-    	// Kraken
-    	// HitBTC
+    	// Kraken (done)
+    	// HitBTC 
     	// Bitmex
     	// Bitfinex (done)
     	// GDAX (done)
@@ -33,12 +30,14 @@ public class App
     	StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
     	StreamingExchange xchangeGdx = StreamingExchangeFactory.INSTANCE.createExchange(GDAXStreamingExchange.class.getName());
     	StreamingExchange geminiExch = StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
+    	StreamingExchange hitbtcExch = StreamingExchangeFactory.INSTANCE.createExchange(HitbtcStreamingExchange.class.getName());
     	Exchange krakenExchange = ExchangeFactory.INSTANCE.createExchange(KrakenExchange.class.getName());
     	StreamingExchangeSubset[] exchangeSubsets = new StreamingExchangeSubset[]{
-    		//new StreamingExchangeAdapter(binanceExch),
-    		//new StreamingExchangeAdapter(bitfinexExch),
-    		//new StreamingExchangeAdapter(xchangeGdx),
+    		new StreamingExchangeAdapter(binanceExch),
+    		new StreamingExchangeAdapter(bitfinexExch),
+    		new StreamingExchangeAdapter(xchangeGdx),
     		new StreamingExchangeAdapter(geminiExch),
+    		//new StreamingExchangeAdapter(hitbtcExch),
     		new PollingExchangeAdapter(krakenExchange)
     	};
         CryptoArbitrageManager manager = new CryptoArbitrageManager(exchangeSubsets);

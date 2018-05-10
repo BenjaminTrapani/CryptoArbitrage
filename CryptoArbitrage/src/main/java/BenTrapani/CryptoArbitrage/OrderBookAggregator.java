@@ -10,9 +10,11 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
 
@@ -24,7 +26,7 @@ public class OrderBookAggregator {
 		public final List<LimitOrder> kBestBids;
 		public final List<LimitOrder> kBestAsks;
 		
-		private static List<LimitOrder> sortAndTakeFirstK(List<LimitOrder> orders, int k) {
+		private List<LimitOrder> sortAndTakeFirstK(List<LimitOrder> orders, int k) {
 			Collections.sort(orders);
 			if (k < orders.size()) {
 				orders = orders.subList(0, k);
@@ -39,12 +41,14 @@ public class OrderBookAggregator {
 			this.kBestBids = sortAndTakeFirstK(allBids, maxBids);
 			this.kBestAsks = sortAndTakeFirstK(allAsks, maxAsks);
 		}
+		public KBestOrders() {
+			this.kBestBids = new ArrayList<LimitOrder>();
+			this.kBestAsks = new ArrayList<LimitOrder>();
+		}
 	}
 	
 	private OrderGraph sharedOrderGraph;
 	private OrderGraphChangeHandler orderGraphChangeHandler;
-	private Hashtable<StreamingExchangeSubset, ArrayList<KBestOrders>> prevOrderBooksMap = 
-			new Hashtable<StreamingExchangeSubset, ArrayList<KBestOrders>>();
 	private final int numBestBids;
 	private final int numBestAsks;
 	
@@ -90,8 +94,8 @@ public class OrderBookAggregator {
 	}
 
 	protected static class OrderBookDiff {
-		private OneSidedOrderBookDiff buyDiffs;
-		private OneSidedOrderBookDiff sellDiffs;
+		private final OneSidedOrderBookDiff buyDiffs;
+		private final OneSidedOrderBookDiff sellDiffs;
 		
 		// Source expected to already be sorted
 		public OrderBookDiff(KBestOrders source, KBestOrders dest) {
@@ -112,7 +116,72 @@ public class OrderBookAggregator {
 		}
 	}
 	
-	private boolean getIsLimitOrderBuyForUs(LimitOrder order){
+	protected static class OrderBookConsumer implements io.reactivex.functions.Consumer<OrderBook> {
+		
+		public OrderBookConsumer(int numBestBids, int numBestAsks, 
+				OrderGraph sharedOrderGraph, String exchangeName, BigDecimal feeToTrade,
+				CurrencyPair currencyPair, OrderGraphChangeHandler orderGraphChangeHandler) {
+			this.numBestBids = numBestBids;
+			this.numBestAsks = numBestAsks;
+			this.sharedOrderGraph = sharedOrderGraph;
+			this.exchangeName = exchangeName;
+			this.feeToTrade = feeToTrade;
+			this.currencyPair = currencyPair;
+			this.orderGraphChangeHandler = orderGraphChangeHandler;
+		}
+		
+		@Override
+		public void accept(OrderBook orderBook) throws Exception {
+			synchronized (lockObj) {
+			KBestOrders newKBest = new KBestOrders(new ArrayList<LimitOrder>(orderBook.getBids()), 
+					new ArrayList<LimitOrder>(orderBook.getAsks()), 
+					numBestBids,
+					numBestAsks);
+			OrderBookDiff diff;
+				diff = new OrderBookDiff(prevOrderBook, newKBest);
+				//System.out.println("Got order book update from exchange " + exchangeName + " on thread " + Thread.currentThread().getId());
+
+				List<LimitOrder> deletions = diff.getDeletions();
+				List<LimitOrder> additions = diff.getAdditions();
+				for (LimitOrder deletion : deletions) {
+					if (!sharedOrderGraph.removeEdge(deletion.getCurrencyPair().counter,
+							deletion.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(deletion),
+							deletion.getRemainingAmount(), deletion.getLimitPrice(), feeToTrade)) {
+						throw new IllegalStateException(
+								"Failed to remove edge that should have existed according to diff: \n"
+										+ " updating currency " + currencyPair.toString() + " for exchange "
+										+ exchangeName + " on thread " + Thread.currentThread().getId());
+					}
+				}
+				for (LimitOrder addition : additions) {
+					sharedOrderGraph.addEdge(addition.getCurrencyPair().counter, addition.getCurrencyPair().base,
+							exchangeName, getIsLimitOrderBuyForUs(addition), addition.getRemainingAmount(),
+							addition.getLimitPrice(), feeToTrade);
+				}
+
+				// Returns immediately and analysis starts running in another
+				// thread
+				orderGraphChangeHandler.onOrderGraphChanged();
+
+				prevOrderBook = newKBest;
+				//System.out.println("Finished order book update from exchange " + exchangeName + " on thread " + Thread.currentThread().getId());
+			}
+		}
+		
+		private KBestOrders prevOrderBook = new KBestOrders();
+		private Object lockObj = new Object();
+		
+		private final int numBestBids;
+		private final int numBestAsks;
+		private final BigDecimal feeToTrade;
+		private final String exchangeName;
+		private final CurrencyPair currencyPair;
+		
+		private OrderGraphChangeHandler orderGraphChangeHandler;
+		private OrderGraph sharedOrderGraph;
+	}
+	
+	private static boolean getIsLimitOrderBuyForUs(LimitOrder order){
 		return order.getType() == OrderType.ASK;
 	}
 	
@@ -144,9 +213,6 @@ public class OrderBookAggregator {
 		Set<CurrencyPair> currenciesForExchange = exchange.getCurrencyPairs();
 		Disposable[] disposablesPerCurrency = new Disposable[currenciesForExchange.size()];
 		Map<CurrencyPair, CurrencyPairMetaData> currencyPairToMeta = exchange.getCurrencyPairMetadata();
-		// Don't need to synchronize access to prevOrderBooksMap because each
-		// exchange only reads from its own key and Hashtable is thread-safe internally by default.
-		prevOrderBooksMap.put(exchange, new ArrayList<KBestOrders>());
 		int idx = 0;
 		
 		for (CurrencyPair currencyPair : currenciesForExchange) {
@@ -154,59 +220,22 @@ public class OrderBookAggregator {
 			BigDecimal feeToTrade = currencyPairToMeta.get(currencyPair).getTradingFee();
 			if (feeToTrade == null) {
 				throw new IllegalStateException("Could not get fee to trade for exchange " +
-												exchange.toString() + 
+												exchangeName + 
 												" and currency pair " + currencyPair.toString());
 			}
 			// TODO also account for min and max trade amounts
 			
 			KBestOrders initialOrderBook = new KBestOrders(new ArrayList<LimitOrder>(), new ArrayList<LimitOrder>(),
 					numBestBids, numBestAsks);
-			ArrayList<KBestOrders> prevOrderBooks = prevOrderBooksMap.get(exchange);
-			synchronized (prevOrderBooks) {
-				prevOrderBooks.add(initialOrderBook);
-			}
-			final int prevOrderBookIdx = idx;
+			ArrayList<KBestOrders> prevOrderBookList = new ArrayList<KBestOrders>();
+			prevOrderBookList.add(initialOrderBook);
+			
+			OrderBookConsumer orderBookConsumer = new OrderBookConsumer(numBestBids, 
+					numBestAsks, sharedOrderGraph, exchangeName, feeToTrade, currencyPair, orderGraphChangeHandler);
+			
 			//System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
 			disposablesPerCurrency[idx] = exchange.getOrderBook(currencyPair)
-					.subscribe(orderBook -> {
-						KBestOrders newKBest = new KBestOrders(orderBook.getBids(), 
-								orderBook.getAsks(), 
-								numBestBids,
-								numBestAsks);
-						OrderBookDiff diff;
-						synchronized (prevOrderBooks) {
-							diff = new OrderBookDiff(prevOrderBooks.get(prevOrderBookIdx), newKBest);
-						}
-						
-						//System.out.println("Got order book update from exchange " + exchangeName);
-						
-						List<LimitOrder> deletions = diff.getDeletions();
-						List<LimitOrder> additions = diff.getAdditions();
-						for (LimitOrder deletion : deletions) {
-							if (!sharedOrderGraph.removeEdge(deletion.getCurrencyPair().counter,
-									deletion.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(deletion),
-									deletion.getRemainingAmount(), deletion.getLimitPrice(), feeToTrade)) {
-								throw new IllegalStateException(
-										"Failed to remove edge that should have existed according to diff: \n" +
-												" updating currency " + currencyPair.toString() + 
-												" for exchange " + exchangeName + 
-												" on thread " + Thread.currentThread().getId() + 
-												" with order book idx " + prevOrderBookIdx);
-							}
-						}
-						for (LimitOrder addition : additions) {
-							sharedOrderGraph.addEdge(addition.getCurrencyPair().counter,
-									addition.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(addition),
-									addition.getRemainingAmount(), addition.getLimitPrice(), feeToTrade);
-						}
-						
-						// Returns immediately and analysis starts running in another thread
-						orderGraphChangeHandler.onOrderGraphChanged();
-						
-						synchronized (prevOrderBooks) {
-							prevOrderBooks.set(prevOrderBookIdx, newKBest);
-						}
-					});
+												  .subscribe(orderBookConsumer);
 			idx++;
 		}
 		return disposablesPerCurrency;
