@@ -227,8 +227,6 @@ public class OrderBookAggregator {
 			
 			KBestOrders initialOrderBook = new KBestOrders(new ArrayList<LimitOrder>(), new ArrayList<LimitOrder>(),
 					numBestBids, numBestAsks);
-			ArrayList<KBestOrders> prevOrderBookList = new ArrayList<KBestOrders>();
-			prevOrderBookList.add(initialOrderBook);
 			
 			OrderBookConsumer orderBookConsumer = new OrderBookConsumer(numBestBids, 
 					numBestAsks, sharedOrderGraph, exchangeName, feeToTrade, currencyPair, orderGraphChangeHandler);
