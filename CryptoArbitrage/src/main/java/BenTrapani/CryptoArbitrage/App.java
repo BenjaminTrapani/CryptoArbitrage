@@ -22,7 +22,6 @@ public class App
     	// Binance (done)
     	// Kraken (done)
     	// HitBTC 
-    	// Bitmex
     	// Bitfinex (done)
     	// GDAX (done)
     	// Gemini (done)
@@ -37,7 +36,7 @@ public class App
     		new StreamingExchangeAdapter(bitfinexExch),
     		new StreamingExchangeAdapter(xchangeGdx),
     		new StreamingExchangeAdapter(geminiExch),
-    		//new StreamingExchangeAdapter(hitbtcExch),
+    		new StreamingExchangeAdapter(hitbtcExch),
     		new PollingExchangeAdapter(krakenExchange)
     	};
         CryptoArbitrageManager manager = new CryptoArbitrageManager(exchangeSubsets);
