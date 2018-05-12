@@ -1,5 +1,6 @@
 package BenTrapani.CryptoArbitrage;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -17,7 +18,7 @@ public class CryptoArbitrageManager {
 	private ArrayList<Disposable> subscriptions; 
 	private StreamingExchangeSubset[] exchanges;
 	private OrderGraph orderGraph = new OrderGraph();
-	private ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor();
+	private ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor(new BigDecimal(1.0), Currency.USD);
 	private OrderBookAnalyzer orderBookAnalyzer = new OrderBookAnalyzer(orderGraph, Currency.USD, 4, arbitrageExecutor);
 	private OrderBookAggregator orderBookAggregator = new OrderBookAggregator(orderGraph, orderBookAnalyzer, 2, 2);
 	
