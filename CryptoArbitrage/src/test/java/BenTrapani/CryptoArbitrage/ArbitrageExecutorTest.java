@@ -19,6 +19,7 @@ import BenTrapani.CryptoArbitrage.ArbitrageExecutor.IntermediateTrade;
 
 public class ArbitrageExecutorTest {
 	
+	private static final BigDecimal pointNineQuantity = BigDecimal.ONE.divide(BigDecimal.TEN).multiply(new BigDecimal(9));
 	@Test
 	public void testRatioConcatenationAndExecutableTradeConstruction() {
 		String testExch1 = "testExch1";
@@ -27,7 +28,6 @@ public class ArbitrageExecutorTest {
 		
 		BigDecimal feeFraction = BigDecimal.ZERO;
 		
-		BigDecimal pointNineQuantity = BigDecimal.ONE.divide(BigDecimal.TEN).multiply(new BigDecimal(9));
 		// Buy BTC with USD
 		GraphEdge someGraphEdge = new GraphEdge(testExch1, Currency.BTC, true, 
 				pointNineQuantity.add(BigDecimal.ZERO), 
@@ -116,6 +116,66 @@ public class ArbitrageExecutorTest {
 		
 	}
 	
+	private static void verifyExecutableTradesWithExpectedUSDFlow(List<ExecutableTrade> executableTrades,
+			BigDecimal expectedPathFlowInUSD, String testExch1, String testExch2, String testExch3, String testExch4,
+			BigDecimal price1, BigDecimal price2, BigDecimal price3, BigDecimal price4) {
+		
+		// This much imprecision is introduced in quantity calculations
+		// If decimalScale = 20, testPrecision is 13, which isn't bad considering most exchanges
+		// don't support this precision anyway. 
+		// TODO use fractions instead of BigDecimals to avoid headache with numeric analysis
+		int testPrecision = CryptoConfigs.decimalScale - 7;
+
+		BigDecimal BTCPerUSD = BigDecimal.ONE.divide(new BigDecimal(8330), CryptoConfigs.decimalScale,
+				BigDecimal.ROUND_DOWN);
+		BigDecimal DGCPerUSD = BTCPerUSD
+				.multiply(new BigDecimal(1021).setScale(CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN));
+		BigDecimal LTCPerUSD = DGCPerUSD.divide(new BigDecimal(1021));
+
+		// First trade to execute should be buying BTC with USD, and we have
+		// enough USD to fill the order
+		assertEquals(Currency.BTC, executableTrades.get(0).base);
+		assertEquals(Currency.USD, executableTrades.get(0).counter);
+		assertEquals(testExch1, executableTrades.get(0).exchangeName);
+		assertEquals(true, executableTrades.get(0).isBuy);
+		assertEquals(price1, executableTrades.get(0).price);
+		BigDecimal expectedQuantity1 = expectedPathFlowInUSD.multiply(BTCPerUSD);
+		assertEquals(expectedQuantity1.setScale(testPrecision, BigDecimal.ROUND_DOWN),
+				executableTrades.get(0).quantity.setScale(testPrecision, BigDecimal.ROUND_DOWN));
+		assertEquals(true, executableTrades.get(0).quantity.compareTo(expectedQuantity1) <= 0);
+
+		// Second trade should be selling BTC for DGC
+		assertEquals(Currency.BTC, executableTrades.get(1).base);
+		assertEquals(Currency.DGC, executableTrades.get(1).counter);
+		assertEquals(testExch2, executableTrades.get(1).exchangeName);
+		assertEquals(false, executableTrades.get(1).isBuy);
+		assertEquals(price2, executableTrades.get(1).price);
+		assertEquals(expectedQuantity1.setScale(testPrecision, BigDecimal.ROUND_DOWN),
+				executableTrades.get(1).quantity.setScale(testPrecision, BigDecimal.ROUND_DOWN));
+		assertEquals(true, executableTrades.get(1).quantity.compareTo(expectedQuantity1) <= 0);
+
+		// Third trade should be buying LTC with DGC
+		BigDecimal expectedQuantityLTC = expectedPathFlowInUSD.multiply(LTCPerUSD);
+		assertEquals(Currency.LTC, executableTrades.get(2).base);
+		assertEquals(Currency.DGC, executableTrades.get(2).counter);
+		assertEquals(testExch3, executableTrades.get(2).exchangeName);
+		assertEquals(true, executableTrades.get(2).isBuy);
+		assertEquals(price3, executableTrades.get(2).price);
+		assertEquals(expectedQuantityLTC.setScale(testPrecision, BigDecimal.ROUND_DOWN),
+				executableTrades.get(2).quantity.setScale(testPrecision, BigDecimal.ROUND_DOWN));
+		assertEquals(true, expectedQuantityLTC.compareTo(executableTrades.get(2).quantity) >= 0);
+
+		// Fourth trade should be selling LTC for USD
+		assertEquals(Currency.LTC, executableTrades.get(3).base);
+		assertEquals(Currency.USD, executableTrades.get(3).counter);
+		assertEquals(testExch4, executableTrades.get(3).exchangeName);
+		assertEquals(false, executableTrades.get(3).isBuy);
+		assertEquals(price4, executableTrades.get(3).price);
+		assertEquals(expectedQuantityLTC.setScale(testPrecision, BigDecimal.ROUND_DOWN),
+				executableTrades.get(3).quantity.setScale(testPrecision, BigDecimal.ROUND_DOWN));
+		assertEquals(true, expectedQuantityLTC.compareTo(executableTrades.get(3).quantity) >= 0);
+	}
+	
 	@Test
 	public void endToEndBuildExecutableTrades() {
 		String testExch1 = "testExch1";
@@ -123,17 +183,17 @@ public class ArbitrageExecutorTest {
 		String testExch3 = "testExch3";
 		String testExch4 = "testExch4";
 		
-		BigDecimal feeFraction = new BigDecimal(0.0);
+		BigDecimal feeFraction = new BigDecimal(0);
 		
 		// Buy BTC with USD
 		// Can push at most (8330 * 0.9) USD, or less if our balance limits us
-		GraphEdge someGraphEdge = new GraphEdge(testExch1, Currency.BTC, true, new BigDecimal(0.9), 
+		GraphEdge someGraphEdge = new GraphEdge(testExch1, Currency.BTC, true, pointNineQuantity, 
 				new BigDecimal(8330), feeFraction);
 		TwoSidedGraphEdge twoSidedE1 = new TwoSidedGraphEdge(Currency.USD, someGraphEdge);
 		
 		// Sell BTC for DGC
 		// Can push at most 0.9 BTC or less if BTC balance is not sufficient
-		GraphEdge secondEdge = new GraphEdge(testExch2, Currency.DGC, false, new BigDecimal(0.9),
+		GraphEdge secondEdge = new GraphEdge(testExch2, Currency.DGC, false, pointNineQuantity,
 				new BigDecimal(1021), feeFraction);
 		TwoSidedGraphEdge twoSidedE2 = new TwoSidedGraphEdge(Currency.BTC, secondEdge);
 		
@@ -145,7 +205,7 @@ public class ArbitrageExecutorTest {
 		
 		// Sell LTC for USD (unrealistically, LTC is more valuable than BTC)
 		// Can push at most 1 LTC through this trade
-		GraphEdge fourthEdge = new GraphEdge(testExch4, Currency.USD, false, new BigDecimal(1.0), 
+		GraphEdge fourthEdge = new GraphEdge(testExch4, Currency.USD, false, new BigDecimal(1), 
 				new BigDecimal(9000.0), feeFraction);
 		TwoSidedGraphEdge twoSidedE4 = new TwoSidedGraphEdge(Currency.LTC, fourthEdge);
 		
@@ -159,10 +219,6 @@ public class ArbitrageExecutorTest {
 		// DGC per USD expected ratio: (1 / 8330) * 1021
 		// LTC per USD expected ratio: ((1 / 8330) * 1021) * (1 / 1021)
 		
-		BigDecimal BTCPerUSD = BigDecimal.ONE.divide(new BigDecimal(8330), CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
-		BigDecimal DGCPerUSD = BTCPerUSD.multiply(new BigDecimal(1021).setScale(CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN));
-		BigDecimal LTCPerUSD = DGCPerUSD.divide(new BigDecimal(1021));
-		
 		// First trade USD quantity in USD: (8330 * 0.9) = 7,497
 		// Second trade BTC quantity in USD: 0.9 / (1 / 8330) = 7,497
 		// Third trade DGC quantity in USD: (1021 * 1) / ((1 / 8330) * 1021) = 8,330
@@ -173,8 +229,9 @@ public class ArbitrageExecutorTest {
 		BigDecimal expectedPathFlowInUSD = new BigDecimal(7497);
 		
 		MockBalanceDS balanceDS = new MockBalanceDS();
+		BigDecimal pointNine1 = pointNineQuantity.add(BigDecimal.ONE.divide(new BigDecimal(100)));
 		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.USD, testExch1), new BigDecimal(7498));
-		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.BTC, testExch2), new BigDecimal(0.91));
+		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.BTC, testExch2), pointNine1);
 		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.DGC, testExch3), new BigDecimal(1022));
 		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.LTC, testExch4), new BigDecimal(1));
 		
@@ -182,49 +239,33 @@ public class ArbitrageExecutorTest {
 		List<ExecutableTrade> executableTrades = arbitrageExecutor.buildExecutableTrades(graphEdges, balanceDS);
 		assertEquals(4, executableTrades.size());
 		
-		// This much imprecision is introduced in quantity calculations
-		int testPrecision = CryptoConfigs.decimalScale - 4;
+		verifyExecutableTradesWithExpectedUSDFlow(executableTrades, expectedPathFlowInUSD, testExch1,
+				testExch2, testExch3, testExch4, someGraphEdge.price, secondEdge.price, thirdEdge.price,
+				fourthEdge.price);
 		
-		// First trade to execute should be buying BTC with USD, and we have enough USD to fill the order
-		assertEquals(Currency.BTC, executableTrades.get(0).base);
-		assertEquals(Currency.USD, executableTrades.get(0).counter);
-		assertEquals(testExch1, executableTrades.get(0).exchangeName);
-		assertEquals(true, executableTrades.get(0).isBuy);
-		assertEquals(someGraphEdge.price, executableTrades.get(0).price);
-		BigDecimal expectedQuantity1 = expectedPathFlowInUSD.multiply(BTCPerUSD);
-		assertEquals(expectedQuantity1.setScale(testPrecision, BigDecimal.ROUND_DOWN), 
-				executableTrades.get(0).quantity.setScale(testPrecision, BigDecimal.ROUND_DOWN));
-		assertEquals(true, executableTrades.get(0).quantity.compareTo(expectedQuantity1) <= 0);
+		// Same as above but limit quantity to of LTC by having half the previous balance
+		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.LTC, testExch4), BigDecimal.ONE.divide(new BigDecimal(2)));
+		// With a quantity of 0.5 LTC, 
+		// Fourth trade LTC quantity in USD: 0.5 / (((1 / 8330) * 1021) * (1 / 1021)) = 4,165
+		expectedPathFlowInUSD = new BigDecimal(4165);
+		executableTrades = arbitrageExecutor.buildExecutableTrades(graphEdges, balanceDS);
+		assertEquals(4, executableTrades.size());
+		verifyExecutableTradesWithExpectedUSDFlow(executableTrades, expectedPathFlowInUSD, testExch1,
+				testExch2, testExch3, testExch4, someGraphEdge.price, secondEdge.price, thirdEdge.price,
+				fourthEdge.price);
 		
-		// Second trade should be selling BTC for DGC
-		assertEquals(Currency.BTC, executableTrades.get(1).base);
-		assertEquals(Currency.DGC, executableTrades.get(1).counter);
-		assertEquals(testExch2, executableTrades.get(1).exchangeName);
-		assertEquals(false, executableTrades.get(1).isBuy);
-		assertEquals(secondEdge.price, executableTrades.get(1).price);
-		assertEquals(expectedQuantity1.setScale(testPrecision, BigDecimal.ROUND_DOWN), 
-				executableTrades.get(1).quantity.setScale(testPrecision, BigDecimal.ROUND_DOWN));
-		assertEquals(true, executableTrades.get(1).quantity.compareTo(expectedQuantity1) <= 0);
-		
-		// Third trade should be buying LTC with DGC
-		BigDecimal expectedQuantityLTC = expectedPathFlowInUSD.multiply(LTCPerUSD);
-		assertEquals(Currency.LTC, executableTrades.get(2).base);
-		assertEquals(Currency.DGC, executableTrades.get(2).counter);
-		assertEquals(testExch3, executableTrades.get(2).exchangeName);
-		assertEquals(true, executableTrades.get(2).isBuy);
-		assertEquals(thirdEdge.price, executableTrades.get(2).price);
-		assertEquals(expectedQuantityLTC.setScale(testPrecision, BigDecimal.ROUND_DOWN), 
-				executableTrades.get(2).quantity.setScale(testPrecision, BigDecimal.ROUND_DOWN));
-		assertEquals(true, expectedQuantityLTC.compareTo(executableTrades.get(2).quantity) >= 0);
-		
-		// Fourth trade should be selling LTC for USD
-		assertEquals(Currency.LTC, executableTrades.get(3).base);
-		assertEquals(Currency.USD, executableTrades.get(3).counter);
-		assertEquals(testExch4, executableTrades.get(3).exchangeName);
-		assertEquals(false, executableTrades.get(3).isBuy);
-		assertEquals(fourthEdge.price, executableTrades.get(3).price);
-		assertEquals(expectedQuantityLTC.setScale(testPrecision, BigDecimal.ROUND_DOWN), 
-				executableTrades.get(3).quantity.setScale(testPrecision, BigDecimal.ROUND_DOWN));
-		assertEquals(true, expectedQuantityLTC.compareTo(executableTrades.get(3).quantity) >= 0);
+		// Same as above but limit quantity of DGC by having a quarter of the
+		// previous balance
+		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.LTC, testExch4), new BigDecimal(1));
+		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.DGC, testExch3),
+				new BigDecimal(1021).divide(new BigDecimal(4)));
+		// With a quantity of 0.25 DGC,
+		// Third trade DGC quantity in USD: (1021 * 0.25) / ((1 / 8330) * 1021)
+		// = 2,082.5
+		expectedPathFlowInUSD = new BigDecimal(4165).divide(new BigDecimal(2));
+		executableTrades = arbitrageExecutor.buildExecutableTrades(graphEdges, balanceDS);
+		assertEquals(4, executableTrades.size());
+		verifyExecutableTradesWithExpectedUSDFlow(executableTrades, expectedPathFlowInUSD, testExch1, testExch2,
+				testExch3, testExch4, someGraphEdge.price, secondEdge.price, thirdEdge.price, fourthEdge.price);
 	}
 }
