@@ -243,7 +243,7 @@ public class ArbitrageExecutorTest {
 				testExch2, testExch3, testExch4, someGraphEdge.price, secondEdge.price, thirdEdge.price,
 				fourthEdge.price);
 		
-		// Same as above but limit quantity to of LTC by having half the previous balance
+		// Same as above but limit quantity of LTC by having half the previous balance
 		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.LTC, testExch4), BigDecimal.ONE.divide(new BigDecimal(2)));
 		// With a quantity of 0.5 LTC, 
 		// Fourth trade LTC quantity in USD: 0.5 / (((1 / 8330) * 1021) * (1 / 1021)) = 4,165
