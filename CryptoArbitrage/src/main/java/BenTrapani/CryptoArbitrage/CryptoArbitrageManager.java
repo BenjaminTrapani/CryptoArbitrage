@@ -33,6 +33,7 @@ public class CryptoArbitrageManager {
 			exchange.buildAndWait(builder);
 		}
 		this.exchanges = exchanges.clone();
+		arbitrageExecutor.setExchanges(exchanges);
 	}
 	
 	public void startArbitrage() {

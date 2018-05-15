@@ -1,10 +1,14 @@
 package BenTrapani.CryptoArbitrage;
 
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Set;
 
 import org.knowm.xchange.Exchange;
+import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.account.AccountInfo;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 
@@ -19,17 +23,39 @@ public abstract class StreamingExchangeSubset {
 	}
 	
 	public Set<CurrencyPair> getCurrencyPairs() {
-		return exchange.getExchangeMetaData().getCurrencyPairs().keySet();
+		synchronized(exchange) {
+			return exchange.getExchangeMetaData().getCurrencyPairs().keySet();
+		}
 	}
 	
 	public Map<CurrencyPair, CurrencyPairMetaData> getCurrencyPairMetadata() {
-		return exchange.getExchangeMetaData().getCurrencyPairs();
+		synchronized(exchange) {
+			return exchange.getExchangeMetaData().getCurrencyPairs();
+		}
 	}
 	
 	public abstract void buildAndWait(ProductSubscriptionBuilder builder);
 	
 	public String getExchangeName() {
-		return exchange.getExchangeSpecification().getExchangeName();
+		synchronized(exchange) {
+			return exchange.getExchangeSpecification().getExchangeName();
+		}
+	}
+	
+	public BigDecimal getBalanceForCurrencyAvailableToTrade(Currency currency) {
+		AccountInfo accountInfo = null;
+		try {
+			synchronized(exchange) {
+				accountInfo = exchange.getAccountService().getAccountInfo();
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+		synchronized(accountInfo) {
+			return accountInfo.getWallet().getBalance(currency).getAvailable();
+		}
 	}
 	
 	public abstract Observable<OrderBook> getOrderBook(CurrencyPair currencyPair);

@@ -40,7 +40,9 @@ public class PollingExchangeAdapter extends StreamingExchangeSubset {
 					while (shouldPollingThreadsRun) {
 						OrderBook orderBookSnapshot = null;
 						try {
-							orderBookSnapshot = exchange.getMarketDataService().getOrderBook(currencyPair);
+							synchronized(exchange) {
+								orderBookSnapshot = exchange.getMarketDataService().getOrderBook(currencyPair);
+							}
 						} catch (IOException e1) {
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
