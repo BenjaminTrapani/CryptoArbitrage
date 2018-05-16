@@ -61,6 +61,12 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 			// If buy, use ratio here. If sell, use prev ratio
 			this.quantity = sourceQuantity.multiply(intTrade.concatenatedRatioUsedForQuantAdjust);
 			
+			// TODO add a check here that ensures that this.quantity is also less than or equal
+			// to available balance on the exchange. Cache this value in IntermediateTrade or something
+			if (this.quantity.compareTo(intTrade.graphEdge.quantity) > 0) {
+				throw new IllegalStateException("Executable quantity computed from source cannot exceed initial quantity available for trade");
+			}
+			
 			// can't modify price at all
 			this.price = intTrade.graphEdge.price;
 			this.isBuy = intTrade.graphEdge.isBuy;
