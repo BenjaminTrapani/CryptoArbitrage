@@ -2,6 +2,7 @@ package BenTrapani.CryptoArbitrage;
 
 import static org.junit.Assert.*;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 
 import org.junit.Test;
@@ -97,5 +98,14 @@ public class FractionTest {
 		Fraction negA = a.multiply(new Fraction(-1));
 		assertEquals(-1, negb.compareTo(negA));
 		assertEquals(1, negA.compareTo(negb));
+	}
+	
+	@Test
+	public void testConvertToFromBigDecimal() {
+		Fraction a = new Fraction(new BigDecimal(11).divide(new BigDecimal(33), 5, BigDecimal.ROUND_DOWN));
+		Fraction expected = new Fraction(BigInteger.valueOf(33333), BigInteger.valueOf(100000));
+		assertEquals(expected, a);
+		BigDecimal convertedBack = a.convertToBigDecimal(5, BigDecimal.ROUND_DOWN);
+		assertEquals(new BigDecimal(0.33333).setScale(5, BigDecimal.ROUND_DOWN), convertedBack);
 	}
 }

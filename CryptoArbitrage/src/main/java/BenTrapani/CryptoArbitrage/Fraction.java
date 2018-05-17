@@ -3,8 +3,6 @@ package BenTrapani.CryptoArbitrage;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import BenTrapani.CryptoArbitrage.OrderGraph.TwoSidedGraphEdge;
-
 /***
  * 
  * @author benjamintrapani
@@ -28,6 +26,14 @@ public class Fraction implements Comparable<Fraction> {
 	
 	public Fraction(BigInteger num, BigInteger denom) {
 		BigIntPair reducedPair = computeReduced(num, denom);
+		numerator = reducedPair.n1;
+		denominator = reducedPair.n2;
+	}
+	
+	public Fraction(BigDecimal val) {
+		BigInteger unscaledValue = val.unscaledValue();
+		BigInteger tempDenom = BigInteger.TEN.pow(val.scale());
+		BigIntPair reducedPair = computeReduced(unscaledValue, tempDenom);
 		numerator = reducedPair.n1;
 		denominator = reducedPair.n2;
 	}
