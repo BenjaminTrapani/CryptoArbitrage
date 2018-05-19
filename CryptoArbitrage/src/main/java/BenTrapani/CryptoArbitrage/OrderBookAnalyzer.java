@@ -1,6 +1,5 @@
 package BenTrapani.CryptoArbitrage;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -71,12 +70,12 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 	protected static class SearchState {
 		public final Currency currency;
 		public final SearchState parent;
-		public final BigDecimal ratio;
+		public final Fraction ratio;
 		public final HashSet<TwoSidedGraphEdge> visitedEdges;
 		
 		public SearchState(Currency currency, 
 				SearchState parent, 
-				BigDecimal ratio,
+				Fraction ratio,
 				HashSet<TwoSidedGraphEdge> visitedEdges) {
 			this.currency = currency;
 			this.parent = parent;
@@ -86,9 +85,9 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 	}
 	
 	public static class AnalysisResult implements Comparable<AnalysisResult> {
-		public final BigDecimal maxRatio;
+		public final Fraction maxRatio;
 		public final HashSet<TwoSidedGraphEdge> tradesToExecute;
-		AnalysisResult(BigDecimal maxRatio, HashSet<TwoSidedGraphEdge> tradesToExecute) {
+		AnalysisResult(Fraction maxRatio, HashSet<TwoSidedGraphEdge> tradesToExecute) {
 			this.maxRatio = maxRatio;
 			this.tradesToExecute = tradesToExecute;
 		}
@@ -106,7 +105,7 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 		private Hashtable<SearchCacheKey, AnalysisResult> maxRatioPerState = new Hashtable<SearchCacheKey, AnalysisResult>();
 		private final Currency destNode;
 		private final SearchState sourceState;
-		private final AnalysisResult sentinelRatio = new AnalysisResult(new BigDecimal(-1.0), null);
+		private final AnalysisResult sentinelRatio = new AnalysisResult(new Fraction(-1), null);
 		private final OrderGraph orderGraphSnapshot;
 		private final int contextMaxTrades;
 		
@@ -204,7 +203,7 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 	
 	protected AnalysisResult searchForArbitrage() {
 		SearchContext searchCtx = new SearchContext(currencyToAccumulate, new SearchState(currencyToAccumulate, 
-				null, new BigDecimal(1.0), new HashSet<TwoSidedGraphEdge>()), 
+				null, new Fraction(1), new HashSet<TwoSidedGraphEdge>()), 
 				(OrderGraph)sharedOrderGraph.clone(), maxTrades);
 		
 		while (searchCtx.getStackSize() > 0) {

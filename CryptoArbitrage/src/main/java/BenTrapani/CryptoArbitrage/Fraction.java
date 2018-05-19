@@ -30,6 +30,10 @@ public class Fraction implements Comparable<Fraction> {
 		denominator = reducedPair.n2;
 	}
 	
+	public Fraction(long num, long denom) {
+		this(BigInteger.valueOf(num), BigInteger.valueOf(denom));
+	}
+	
 	public Fraction(BigDecimal val) {
 		BigInteger unscaledValue = val.unscaledValue();
 		BigInteger tempDenom = BigInteger.TEN.pow(val.scale());
@@ -72,6 +76,20 @@ public class Fraction implements Comparable<Fraction> {
 	public Fraction subtract(Fraction other) {
 		FractionPairWithCommonDenominator fracPair = new FractionPairWithCommonDenominator(this, other);
 		return new Fraction(fracPair.numerator1.subtract(fracPair.numerator2), fracPair.commonDenominator);
+	}
+	
+	public Fraction max(Fraction other) {
+		if (compareTo(other) > 0) {
+			return this;
+		}
+		return other;
+	}
+	
+	public Fraction min(Fraction other) {
+		if (compareTo(other) < 0) {
+			return this;
+		}
+		return other;
 	}
 	
 	private static BigInteger computeGCD(BigInteger arg1, BigInteger arg2) {

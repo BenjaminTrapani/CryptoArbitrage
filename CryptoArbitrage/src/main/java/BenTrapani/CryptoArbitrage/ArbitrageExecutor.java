@@ -1,10 +1,10 @@
 package BenTrapani.CryptoArbitrage;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import BenTrapani.CryptoArbitrage.OrderBookAnalyzer.AnalysisResult;
 import BenTrapani.CryptoArbitrage.OrderGraph.GraphEdge;
@@ -15,34 +15,35 @@ import org.knowm.xchange.currency.Currency;
 
 public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 	
-	private final BigDecimal minAcceptableRatio;
+	private final Fraction minAcceptableRatio;
 	private final Currency tradePathSource;
 	private ConcreteCurrencyBalanceDS currencyBalanceDS;
+	private ReentrantLock currencyBalanceDSLock = new ReentrantLock();
 	
-	public ArbitrageExecutor(BigDecimal minAcceptableRatio, Currency tradePathSource) {
+	public ArbitrageExecutor(Fraction minAcceptableRatio, Currency tradePathSource) {
 		this.minAcceptableRatio = minAcceptableRatio;
 		this.tradePathSource = tradePathSource;
 	}
 	
 	public void setExchanges(StreamingExchangeSubset[] newExchanges) {
-		synchronized(currencyBalanceDS) {
-			this.currencyBalanceDS = new ConcreteCurrencyBalanceDS(newExchanges);
-		}
+		currencyBalanceDSLock.lock();
+		this.currencyBalanceDS = new ConcreteCurrencyBalanceDS(newExchanges);
+		currencyBalanceDSLock.unlock();
 	}
 	
 	public static interface CurrencyBalanceDS {
-		public BigDecimal getBalance(Currency currency, String exchangeName);
+		public Fraction getBalance(Currency currency, String exchangeName);
 	}
 	
 	protected static class ExecutableTrade {
 		final String exchangeName;
 		final Currency base;
 		final Currency counter;
-		final BigDecimal quantity;
-		final BigDecimal price;
+		final Fraction quantity;
+		final Fraction price;
 		final boolean isBuy;
 		
-		public ExecutableTrade(IntermediateTrade intTrade, BigDecimal sourceQuantity) {
+		public ExecutableTrade(IntermediateTrade intTrade, Fraction sourceQuantity) {
 			this.exchangeName = intTrade.graphEdge.exchangeName;
 			if (intTrade.graphEdge.isBuy) {
 				this.base = intTrade.graphEdge.destCurrency;
@@ -86,10 +87,10 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 	protected static class IntermediateTrade {
 		final Currency sourceCurrency;
 		final GraphEdge graphEdge;
-		BigDecimal concatenatedRatio;
-		BigDecimal prevConcatenatedRatio;
-		BigDecimal concatenatedRatioUsedForQuantAdjust; //same as concatenatedRatio for buy, and is concatenatedRatio of prev ratio for sell
-		BigDecimal quantityInPathSourceUnits; //source quantity in terms of path source units
+		Fraction concatenatedRatio;
+		Fraction prevConcatenatedRatio;
+		Fraction concatenatedRatioUsedForQuantAdjust; //same as concatenatedRatio for buy, and is concatenatedRatio of prev ratio for sell
+		Fraction quantityInPathSourceUnits; //source quantity in terms of path source units
 		
 		public IntermediateTrade(Currency sourceCurrency, GraphEdge graphEdge) {
 			this.sourceCurrency = sourceCurrency;
@@ -98,9 +99,9 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 	}
 	
 	protected static List<IntermediateTrade> populateConcatenatedRatios(List<IntermediateTrade> intermediateTrades) {
-		BigDecimal ratioHerePerUnitSource = BigDecimal.ONE;
+		Fraction ratioHerePerUnitSource = new Fraction(1);
 		for (IntermediateTrade intermediateTrade : intermediateTrades) {
-			BigDecimal nextRatio = ratioHerePerUnitSource.multiply(intermediateTrade.graphEdge.ratio);
+			Fraction nextRatio = ratioHerePerUnitSource.multiply(intermediateTrade.graphEdge.ratio);
 			intermediateTrade.concatenatedRatio = nextRatio;
 			intermediateTrade.prevConcatenatedRatio = ratioHerePerUnitSource;
 			ratioHerePerUnitSource = nextRatio;
@@ -112,39 +113,34 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 		for (int i = 0; i < intermediateTrades.size(); ++i) {
 			IntermediateTrade intTrade = intermediateTrades.get(i);
 			intTrade.concatenatedRatioUsedForQuantAdjust = intTrade.graphEdge.isBuy ? intTrade.concatenatedRatio : intTrade.prevConcatenatedRatio;
-			BigDecimal adjustedPrevConcatRat = intTrade.prevConcatenatedRatio.add(CryptoConfigs.decimalRoundAdjustDigit);
+			Fraction prevConcatRat = intTrade.prevConcatenatedRatio;
 			if (intTrade.graphEdge.isBuy) {
-				BigDecimal sourceQuantity = intTrade.graphEdge.price.multiply(intTrade.graphEdge.quantity);
-				BigDecimal sourceQuantityInPathSource = sourceQuantity.divide(adjustedPrevConcatRat, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
+				Fraction sourceQuantity = intTrade.graphEdge.price.multiply(intTrade.graphEdge.quantity);
+				Fraction sourceQuantityInPathSource = sourceQuantity.divide(prevConcatRat);
 				intTrade.quantityInPathSourceUnits = sourceQuantityInPathSource;
 			} else {
-				intTrade.quantityInPathSourceUnits = intTrade.graphEdge.quantity.divide(adjustedPrevConcatRat, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
+				intTrade.quantityInPathSourceUnits = intTrade.graphEdge.quantity.divide(prevConcatRat);
 			}
 		}
 		return intermediateTrades;
 	}
 	
-	protected static BigDecimal computeLoopMaxflowInSource(List<IntermediateTrade> intTrades, 
+	protected static Fraction computeLoopMaxflowInSource(List<IntermediateTrade> intTrades, 
 			CurrencyBalanceDS ds) {
-		BigDecimal minEdgeCapacityInPathSourceUnits = null;
+		Fraction minEdgeCapacityInPathSourceUnits = null;
 		for (IntermediateTrade intTrade : intTrades) {
-			BigDecimal sourceQuantityAvailableForTrade = ds.getBalance(intTrade.sourceCurrency, intTrade.graphEdge.exchangeName);
-			BigDecimal sourceQuantityAvailableForTradeInPathSourceUnits = sourceQuantityAvailableForTrade.divide(intTrade.prevConcatenatedRatio.add(CryptoConfigs.decimalRoundAdjustDigit), 
-					CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
-			BigDecimal minSourceQuantityInPathSourceUnits = intTrade.quantityInPathSourceUnits.min(sourceQuantityAvailableForTradeInPathSourceUnits);
+			Fraction sourceQuantityAvailableForTrade = ds.getBalance(intTrade.sourceCurrency, intTrade.graphEdge.exchangeName);
+			Fraction sourceQuantityAvailableForTradeInPathSourceUnits = sourceQuantityAvailableForTrade.divide(intTrade.prevConcatenatedRatio);
+			Fraction minSourceQuantityInPathSourceUnits = intTrade.quantityInPathSourceUnits.min(sourceQuantityAvailableForTradeInPathSourceUnits);
 			if (minEdgeCapacityInPathSourceUnits == null || minEdgeCapacityInPathSourceUnits.compareTo(minSourceQuantityInPathSourceUnits) > 0) {
 				minEdgeCapacityInPathSourceUnits = minSourceQuantityInPathSourceUnits;
 			}
-		}
-		if (minEdgeCapacityInPathSourceUnits != null){
-			// bad way of copying it
-			minEdgeCapacityInPathSourceUnits = minEdgeCapacityInPathSourceUnits.add(BigDecimal.ZERO);
 		}
 		return minEdgeCapacityInPathSourceUnits;
 	}
 	
 	static List<ExecutableTrade> convertToExecutableTrades(List<IntermediateTrade> intTrades,
-			BigDecimal sourceQuantity) {
+			Fraction sourceQuantity) {
 		
 		List<ExecutableTrade> executableTrades = new ArrayList<ExecutableTrade>(intTrades.size());
 		
@@ -172,7 +168,7 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 		
 		populateConcatenatedRatios(orderedEdges);
 		computeQuantitiesInSourceUnits(orderedEdges);
-		BigDecimal loopCapacity = computeLoopMaxflowInSource(orderedEdges, ds);
+		Fraction loopCapacity = computeLoopMaxflowInSource(orderedEdges, ds);
 		return convertToExecutableTrades(orderedEdges, loopCapacity);
 	}
 	

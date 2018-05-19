@@ -1,6 +1,5 @@
 package BenTrapani.CryptoArbitrage;
 
-import java.math.BigDecimal;
 import java.util.Hashtable;
 
 import org.knowm.xchange.currency.Currency;
@@ -16,11 +15,11 @@ public class ConcreteCurrencyBalanceDS implements ArbitrageExecutor.CurrencyBala
 	}
 	
 	@Override
-	public BigDecimal getBalance(Currency currency, String exchangeName) {
+	public Fraction getBalance(Currency currency, String exchangeName) {
 		StreamingExchangeSubset keyedExchange = streamingExchangeSubsetByName.get(exchangeName);
 		if (keyedExchange == null) {
 			throw new IllegalStateException("Exchange not found for name " + exchangeName);
 		}
-		return keyedExchange.getBalanceForCurrencyAvailableToTrade(currency);
+		return new Fraction(keyedExchange.getBalanceForCurrencyAvailableToTrade(currency));
 	}
 }

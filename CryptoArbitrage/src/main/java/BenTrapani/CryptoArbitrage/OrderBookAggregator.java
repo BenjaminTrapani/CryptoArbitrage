@@ -6,19 +6,15 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
-
-import info.bitrich.xchangestream.core.StreamingExchange;
 
 public class OrderBookAggregator {
 	
@@ -119,7 +115,7 @@ public class OrderBookAggregator {
 	protected static class OrderBookConsumer implements io.reactivex.functions.Consumer<OrderBook> {
 		
 		public OrderBookConsumer(int numBestBids, int numBestAsks, 
-				OrderGraph sharedOrderGraph, String exchangeName, BigDecimal feeToTrade,
+				OrderGraph sharedOrderGraph, String exchangeName, Fraction feeToTrade,
 				CurrencyPair currencyPair, OrderGraphChangeHandler orderGraphChangeHandler) {
 			this.numBestBids = numBestBids;
 			this.numBestAsks = numBestAsks;
@@ -146,7 +142,9 @@ public class OrderBookAggregator {
 				for (LimitOrder deletion : deletions) {
 					if (!sharedOrderGraph.removeEdge(deletion.getCurrencyPair().counter,
 							deletion.getCurrencyPair().base, exchangeName, getIsLimitOrderBuyForUs(deletion),
-							deletion.getRemainingAmount(), deletion.getLimitPrice(), feeToTrade)) {
+							new Fraction(deletion.getRemainingAmount()), 
+							new Fraction(deletion.getLimitPrice()), 
+							feeToTrade)) {
 						throw new IllegalStateException(
 								"Failed to remove edge that should have existed according to diff: \n"
 										+ " updating currency " + currencyPair.toString() + " for exchange "
@@ -155,8 +153,10 @@ public class OrderBookAggregator {
 				}
 				for (LimitOrder addition : additions) {
 					sharedOrderGraph.addEdge(addition.getCurrencyPair().counter, addition.getCurrencyPair().base,
-							exchangeName, getIsLimitOrderBuyForUs(addition), addition.getRemainingAmount(),
-							addition.getLimitPrice(), feeToTrade);
+							exchangeName, getIsLimitOrderBuyForUs(addition), 
+							new Fraction(addition.getRemainingAmount()),
+							new Fraction(addition.getLimitPrice()), 
+							feeToTrade);
 				}
 
 				// Returns immediately and analysis starts running in another
@@ -173,7 +173,7 @@ public class OrderBookAggregator {
 		
 		private final int numBestBids;
 		private final int numBestAsks;
-		private final BigDecimal feeToTrade;
+		private final Fraction feeToTrade;
 		private final String exchangeName;
 		private final CurrencyPair currencyPair;
 		
@@ -217,17 +217,19 @@ public class OrderBookAggregator {
 		
 		for (CurrencyPair currencyPair : currenciesForExchange) {
 			// feeToTrade is a fraction by volume taker fee (fraction expressed in dest currency)
-			BigDecimal feeToTrade = currencyPairToMeta.get(currencyPair).getTradingFee();
-			if (feeToTrade == null) {
+			CurrencyPairMetaData metadataForPair = currencyPairToMeta.get(currencyPair);
+			if (metadataForPair == null ){
+				throw new IllegalStateException("Could not find metadata for currency pair " + currencyPair.toString());
+			}
+			BigDecimal feeToTradeDec = metadataForPair.getTradingFee();
+			if (feeToTradeDec == null) {
 				throw new IllegalStateException("Could not get fee to trade for exchange " +
 												exchangeName + 
 												" and currency pair " + currencyPair.toString());
 			}
 			// TODO also account for min and max trade amounts
 			
-			KBestOrders initialOrderBook = new KBestOrders(new ArrayList<LimitOrder>(), new ArrayList<LimitOrder>(),
-					numBestBids, numBestAsks);
-			
+			Fraction feeToTrade = new Fraction(currencyPairToMeta.get(currencyPair).getTradingFee());
 			OrderBookConsumer orderBookConsumer = new OrderBookConsumer(numBestBids, 
 					numBestAsks, sharedOrderGraph, exchangeName, feeToTrade, currencyPair, orderGraphChangeHandler);
 			

@@ -1,6 +1,5 @@
 package BenTrapani.CryptoArbitrage;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -11,14 +10,13 @@ import org.knowm.xchange.currency.CurrencyPair;
 
 import info.bitrich.xchangestream.core.ProductSubscription;
 import info.bitrich.xchangestream.core.ProductSubscription.ProductSubscriptionBuilder;
-import info.bitrich.xchangestream.core.StreamingExchange;
 import io.reactivex.disposables.Disposable;
 
 public class CryptoArbitrageManager {
 	private ArrayList<Disposable> subscriptions; 
 	private StreamingExchangeSubset[] exchanges;
 	private OrderGraph orderGraph = new OrderGraph();
-	private ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor(new BigDecimal(1.0), Currency.USD);
+	private ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor(new Fraction(1), Currency.USD);
 	private OrderBookAnalyzer orderBookAnalyzer = new OrderBookAnalyzer(orderGraph, Currency.USD, 4, arbitrageExecutor);
 	private OrderBookAggregator orderBookAggregator = new OrderBookAggregator(orderGraph, orderBookAnalyzer, 2, 2);
 	

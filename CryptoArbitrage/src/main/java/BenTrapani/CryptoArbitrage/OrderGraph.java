@@ -1,6 +1,5 @@
 package BenTrapani.CryptoArbitrage;
 
-import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Hashtable;
 
@@ -48,10 +47,10 @@ public class OrderGraph implements Cloneable {
 		public final String exchangeName;
 		public final Currency destCurrency;
 		public final boolean isBuy;
-		public final BigDecimal quantity;
-		public final BigDecimal price;
+		public final Fraction quantity;
+		public final Fraction price;
 		// Ratio is the amount of dest per unit source
-		public final BigDecimal ratio;
+		public final Fraction ratio;
 		
 		// Quantity is specified in amount of base.
 		// Price is specified in amount of counter per unit base. 
@@ -63,15 +62,15 @@ public class OrderGraph implements Cloneable {
 		public GraphEdge(String exchangeName, 
 				Currency destCurrency, 
 				boolean isBuy,
-				BigDecimal quantity,
-				BigDecimal price,
-				BigDecimal feeFraction) {
+				Fraction quantity,
+				Fraction price,
+				Fraction feeFraction) {
 			this.exchangeName = exchangeName;
 			this.destCurrency = destCurrency;
 			this.isBuy = isBuy;
 			this.quantity = quantity;
 			this.price = price;
-			BigDecimal unadjustedRatio = this.isBuy ? BigDecimal.ONE.divide(this.price, CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN) : this.price;
+			Fraction unadjustedRatio = this.isBuy ? new Fraction(1).divide(this.price) : this.price;
 			this.ratio = unadjustedRatio.subtract(unadjustedRatio.multiply(feeFraction));
 		}
 		
@@ -152,9 +151,9 @@ public class OrderGraph implements Cloneable {
 			Currency base, 
 			String exchangeName, 
 			boolean isBuyOrder,
-			BigDecimal quantity, 
-			BigDecimal price, 
-			BigDecimal feeFraction) {
+			Fraction quantity, 
+			Fraction price, 
+			Fraction feeFraction) {
 		
 		DirectedCurrencyPair currencyPair = new DirectedCurrencyPair(counter, base, isBuyOrder);
 		GraphEdge newEdge = new GraphEdge(exchangeName, currencyPair.dest, isBuyOrder, quantity, price, feeFraction);
@@ -172,9 +171,9 @@ public class OrderGraph implements Cloneable {
 			Currency base,
 			String exchangeName,
 			boolean isBuy, 
-			BigDecimal quantity,
-			BigDecimal price, 
-			BigDecimal feeFraction) {
+			Fraction quantity,
+			Fraction price, 
+			Fraction feeFraction) {
 		DirectedCurrencyPair mutablePair = new DirectedCurrencyPair(counter, base, isBuy);
 		synchronized(graphSet) { 
 			if (graphSet.containsKey(mutablePair.source)) {

@@ -2,6 +2,7 @@ package BenTrapani.CryptoArbitrage;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,7 +25,8 @@ public abstract class StreamingExchangeSubset {
 	
 	public Set<CurrencyPair> getCurrencyPairs() {
 		synchronized(exchange) {
-			return exchange.getExchangeMetaData().getCurrencyPairs().keySet();
+			//return exchange.getExchangeMetaData().getCurrencyPairs().keySet();
+			return new HashSet<CurrencyPair>(exchange.getExchangeSymbols());
 		}
 	}
 	
