@@ -43,8 +43,8 @@ public class Fraction implements Comparable<Fraction> {
 	}
 	
 	public BigDecimal convertToBigDecimal(int scale, int roundingMode) {
-		return BigDecimal.valueOf(numerator.longValueExact())
-				         .divide(BigDecimal.valueOf(denominator.longValueExact()), scale, roundingMode);
+		return new BigDecimal(numerator)
+				                        .divide(new BigDecimal(denominator), scale, roundingMode);
 	}
 	
 	public Fraction multiply(Fraction other) {

@@ -107,5 +107,11 @@ public class FractionTest {
 		assertEquals(expected, a);
 		BigDecimal convertedBack = a.convertToBigDecimal(5, BigDecimal.ROUND_DOWN);
 		assertEquals(new BigDecimal(0.33333).setScale(5, BigDecimal.ROUND_DOWN), convertedBack);
+		
+		BigDecimal valueToTest = new BigDecimal(3).divide(new BigDecimal(7), 
+				CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
+		Fraction fracRep = new Fraction(valueToTest);
+		BigDecimal testValBack = fracRep.convertToBigDecimal(CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
+		assertEquals(valueToTest, testValBack);
 	}
 }
