@@ -1,5 +1,6 @@
 package BenTrapani.CryptoArbitrage;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -188,7 +189,7 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 			System.out.println(executableTrades.toString());
 			
 		}else {
-			System.out.println("No profitable trade found. Best ratio = " + analysisResult.maxRatio);
+			System.out.println("No profitable trade found. Best ratio = " + analysisResult.maxRatio.convertToBigDecimal(5, BigDecimal.ROUND_DOWN));
 		}
 	}
 }

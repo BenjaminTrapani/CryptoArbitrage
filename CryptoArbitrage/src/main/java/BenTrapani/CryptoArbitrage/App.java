@@ -37,7 +37,7 @@ public class App
     		new StreamingExchangeAdapter(xchangeGdx),
     		new StreamingExchangeAdapter(geminiExch),
     		new StreamingExchangeAdapter(hitbtcExch),
-    		new PollingExchangeAdapter(krakenExchange)
+    		//new PollingExchangeAdapter(krakenExchange)
     	};
         CryptoArbitrageManager manager = new CryptoArbitrageManager(exchangeSubsets);
         manager.startArbitrage();

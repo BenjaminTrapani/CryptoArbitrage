@@ -151,4 +151,9 @@ public class Fraction implements Comparable<Fraction> {
 		FractionPairWithCommonDenominator pair = new FractionPairWithCommonDenominator(this, o);
 		return pair.numerator1.compareTo(pair.numerator2);
 	}
+	
+	@Override
+	public String toString() {
+		return numerator.toString() + " / " + denominator.toString();
+	}
 }

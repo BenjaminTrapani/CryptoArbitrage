@@ -25,8 +25,7 @@ public abstract class StreamingExchangeSubset {
 	
 	public Set<CurrencyPair> getCurrencyPairs() {
 		synchronized(exchange) {
-			//return exchange.getExchangeMetaData().getCurrencyPairs().keySet();
-			return new HashSet<CurrencyPair>(exchange.getExchangeSymbols());
+			return exchange.getExchangeMetaData().getCurrencyPairs().keySet();
 		}
 	}
 	
