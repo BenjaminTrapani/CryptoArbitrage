@@ -71,6 +71,15 @@ public class OrderGraph implements Cloneable {
 			this.quantity = quantity;
 			this.price = price;
 			Fraction unadjustedRatio = this.isBuy ? new Fraction(1).divide(this.price) : this.price;
+			// 1. ratio = unadjustedRatio * (1 - feeFraction)
+			// We lose feeFraction * unadjustedRatio dest per unit source due to fees, since
+			// unadjustedRatio is dest per unit source and fee can be considered taken out of dest.
+			// Show (source - (source * fee)) * unadjustedRatio = dest - (dest * fee)
+			// Since unadjustedRatio by definition is dest / unit source, we are done
+			// Show that (source - (source * fee)) * unadjustedRatio = source * (unadjustedRatio * (1 - fee))
+			// source * unadjustedRatio - source * fee * unadjustedRatio = source * unadjustedRatio * (1 - fee)
+			// Done, the two are equivalent. Can equivalently adjust source or dest by fee and get the same ratio,
+			// that is computed using formula 1.
 			this.ratio = unadjustedRatio.subtract(unadjustedRatio.multiply(feeFraction));
 		}
 		

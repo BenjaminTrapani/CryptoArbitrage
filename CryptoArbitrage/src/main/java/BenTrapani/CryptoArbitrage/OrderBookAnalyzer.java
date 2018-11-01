@@ -163,7 +163,7 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 				throw new IllegalStateException("Parent must have max ratio cache initialized before children are processed");
 			}
 			if (!maxRatioPerState.containsKey(childKey) && !isDestNode) {
-				throw new IllegalStateException("Child must have max ratio cache initialed before updating parent if not dest node");
+				throw new IllegalStateException("Child must have max ratio cache initialized before updating parent if not dest node");
 			}
 			
 			final AnalysisResult prevMaxRatio = maxRatioPerState.get(parentKey);

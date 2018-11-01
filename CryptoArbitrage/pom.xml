@@ -50,6 +50,13 @@
       </configuration>
     </plugin>
     </plugins>
+    
+    <resources>
+        <resource>
+            <directory>src/main/java</directory>
+            <filtering>true</filtering>
+        </resource>
+    </resources>
   </build>
 
 
@@ -64,42 +71,47 @@
     <dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-stream-core</artifactId>
-    	<version>4.3.3-SNAPSHOT</version>
-	</dependency>
-	<dependency>
-    	<groupId>info.bitrich.xchange-stream</groupId>
-    	<artifactId>xchange-gdax</artifactId>
-    	<version>4.3.3-SNAPSHOT</version>
-	</dependency>
+    	<version>4.3.12-SNAPSHOT</version>
+   </dependency>
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-binance</artifactId>
-    	<version>4.3.3-SNAPSHOT</version>
+    	<version>4.3.12-SNAPSHOT</version>
 	</dependency>
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-hitbtc</artifactId>
-    	<version>4.3.3-SNAPSHOT</version>
+    	<version>4.3.12-SNAPSHOT</version>
 	</dependency>
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-bitfinex</artifactId>
-    	<version>4.3.3-SNAPSHOT</version>
+    	<version>4.3.12-SNAPSHOT</version>
 	</dependency>
 	<dependency>
 		<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-gemini</artifactId>
-    	<version>4.3.3-SNAPSHOT</version>
+    	<version>4.3.12-SNAPSHOT</version>
 	</dependency>
 	<dependency>
 		<groupId>info.bitrich.xchange-stream</groupId>
 		<artifactId>xchange-poloniex2</artifactId>
-		<version>4.3.3-SNAPSHOT</version>
+		<version>4.3.12-SNAPSHOT</version>
 	</dependency>
 	<dependency>
   		<groupId>org.knowm.xchange</groupId>
   		<artifactId>xchange-kraken</artifactId>
-  		<version>4.3.3</version>
+  		<version>4.3.12-SNAPSHOT</version>
+	</dependency>
+	<dependency>
+  		<groupId>info.bitrich.xchange-stream</groupId>
+  		<artifactId>xchange-cexio</artifactId>
+  		<version>4.3.12-SNAPSHOT</version>
+	</dependency>
+	<dependency>
+  		<groupId>info.bitrich.xchange-stream</groupId>
+  		<artifactId>xchange-wex</artifactId>
+  		<version>4.3.12-SNAPSHOT</version>
 	</dependency>
 	
 	<dependency>

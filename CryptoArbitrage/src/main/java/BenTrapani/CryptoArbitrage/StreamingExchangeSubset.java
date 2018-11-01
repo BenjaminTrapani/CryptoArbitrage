@@ -2,7 +2,6 @@ package BenTrapani.CryptoArbitrage;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -10,6 +9,7 @@ import org.knowm.xchange.Exchange;
 import org.knowm.xchange.currency.Currency;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.account.AccountInfo;
+import org.knowm.xchange.dto.account.Fee;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 
@@ -57,6 +57,18 @@ public abstract class StreamingExchangeSubset {
 		synchronized(accountInfo) {
 			return accountInfo.getWallet().getBalance(currency).getAvailable();
 		}
+	}
+	
+	public Map<CurrencyPair, Fee> getDynamicTradingFees() {
+		synchronized(exchange) {
+			try {
+				return exchange.getAccountService().getDynamicTradingFees();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return null;
 	}
 	
 	public abstract Observable<OrderBook> getOrderBook(CurrencyPair currencyPair);

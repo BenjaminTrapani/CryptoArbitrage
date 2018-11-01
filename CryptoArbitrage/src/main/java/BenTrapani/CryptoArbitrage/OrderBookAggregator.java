@@ -15,6 +15,9 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.meta.CurrencyPairMetaData;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
+import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
+import org.knowm.xchange.dto.account.Fee;
 
 public class OrderBookAggregator {
 	
@@ -215,21 +218,45 @@ public class OrderBookAggregator {
 		Map<CurrencyPair, CurrencyPairMetaData> currencyPairToMeta = exchange.getCurrencyPairMetadata();
 		int idx = 0;
 		
+		Map<CurrencyPair, Fee> feeMap = null;
+		try {
+			feeMap = exchange.getDynamicTradingFees();
+		} catch (NotAvailableFromExchangeException e) {
+			System.out.println("Dynamic trading fees unsupported for exchange " + exchangeName);
+		} catch (NotYetImplementedForExchangeException e) {
+			System.out.println("Dynamic trading fees unsupported for exchange " + exchangeName);
+		}
+		
 		for (CurrencyPair currencyPair : currenciesForExchange) {
 			// feeToTrade is a fraction by volume taker fee (fraction expressed in dest currency)
 			CurrencyPairMetaData metadataForPair = currencyPairToMeta.get(currencyPair);
 			if (metadataForPair == null ){
 				throw new IllegalStateException("Could not find metadata for currency pair " + currencyPair.toString());
 			}
-			BigDecimal feeToTradeDec = metadataForPair.getTradingFee();
-			if (feeToTradeDec == null) {
-				throw new IllegalStateException("Could not get fee to trade for exchange " +
-												exchangeName + 
-												" and currency pair " + currencyPair.toString());
-			}
+			
 			// TODO also account for min and max trade amounts
 			
-			Fraction feeToTrade = new Fraction(currencyPairToMeta.get(currencyPair).getTradingFee());
+			BigDecimal currentTradingFee = null;
+			if (feeMap != null) {
+				Fee feeForPair = feeMap.get(currencyPair);
+				if (feeForPair == null) {
+					System.out.println("Missing maker taker fees for currency " + currencyPair.toString() + 
+							" on exchange " + exchangeName);
+				} else {
+					currentTradingFee = feeForPair.getTakerFee();
+				}
+			}
+			if (currentTradingFee == null)
+			{
+				currentTradingFee = metadataForPair.getTradingFee();
+				if (currentTradingFee == null) {
+					throw new IllegalStateException("Could not get fee to trade for exchange " +
+													exchangeName + 
+													" and currency pair " + currencyPair.toString());
+				}
+			}
+			
+			Fraction feeToTrade = new Fraction(currentTradingFee);
 			OrderBookConsumer orderBookConsumer = new OrderBookConsumer(numBestBids, 
 					numBestAsks, sharedOrderGraph, exchangeName, feeToTrade, currencyPair, orderGraphChangeHandler);
 			
