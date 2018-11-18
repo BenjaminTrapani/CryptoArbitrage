@@ -319,7 +319,7 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 					while(!shouldExit) {
 						try {
 							semaphore.acquire();
-							analysisHandler.onOrderBookAnalysisComplete(searchForArbitrage());
+							analysisHandler.onOrderBookAnalysisComplete(searchForArbitrageBellmanFord());
 						} catch (InterruptedException e) {
 							shouldExit = true;
 						}
