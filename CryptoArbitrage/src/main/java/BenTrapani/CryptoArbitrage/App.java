@@ -43,10 +43,10 @@ public class App
     	// Gemini (done)
     	//StreamingExchange binanceExch = StreamingExchangeFactory.INSTANCE.createExchange(BinanceStreamingExchange.class.getName());
     	StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
-    	StreamingExchange geminiExch = StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
+    	//StreamingExchange geminiExch = StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
     	StreamingExchange hitbtcExch = StreamingExchangeFactory.INSTANCE.createExchange(HitbtcStreamingExchange.class.getName());
-    	StreamingExchange wexExch = StreamingExchangeFactory.INSTANCE.createExchange(WexStreamingExchange.class.getName());
-    	StreamingExchange cexIOExch = StreamingExchangeFactory.INSTANCE.createExchange(CexioStreamingExchange.class.getName());
+    	//StreamingExchange wexExch = StreamingExchangeFactory.INSTANCE.createExchange(WexStreamingExchange.class.getName());
+    	//StreamingExchange cexIOExch = StreamingExchangeFactory.INSTANCE.createExchange(CexioStreamingExchange.class.getName());
     	Exchange krakenExchange = ExchangeFactory.INSTANCE.createExchange(KrakenExchange.class.getName());
     	
     	Exchange[] exchangeCollection = new Exchange[]{bitfinexExch, hitbtcExch, krakenExchange};
@@ -73,9 +73,9 @@ public class App
     		//new StreamingExchangeAdapter(xchangeGdx),
     		//new StreamingExchangeAdapter(geminiExch),
     		new StreamingExchangeAdapter(hitbtcExch),
-    		new StreamingExchangeAdapter(wexExch),
-    		new StreamingExchangeAdapter(cexIOExch)
-    		//new PollingExchangeAdapter(krakenExchange)
+    		//new StreamingExchangeAdapter(wexExch),
+    		//new StreamingExchangeAdapter(cexIOExch)
+    		new PollingExchangeAdapter(krakenExchange)
     	};
     	
         CryptoArbitrageManager manager = new CryptoArbitrageManager(exchangeSubsets);

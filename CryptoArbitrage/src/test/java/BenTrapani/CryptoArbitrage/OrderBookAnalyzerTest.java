@@ -36,6 +36,25 @@ public class OrderBookAnalyzerTest {
 		return orderGraph;
 	}
 	
+	private OrderGraph buildTestOrderGraph1WithPositiveShortPath() {
+		OrderGraph orderGraph = new OrderGraph();
+		/*
+		 * USD ---0.002---->   BTC
+		 * \  <---1000----- /> 
+		 *  \			   /
+		 * 	 \			  0.05
+		 * 	 0.1		 /
+		 * 		\> DGC  /
+		 */
+		Fraction fee = new Fraction(0);
+		Fraction oneFrac = new Fraction(1);
+		orderGraph.addEdge(Currency.USD, Currency.DGC, "poloniex", true, oneFrac, new Fraction(10), fee);
+		orderGraph.addEdge(Currency.DGC, Currency.BTC, "gdax", true, oneFrac, new Fraction(100, 5), fee);
+		orderGraph.addEdge(Currency.BTC, Currency.USD, "coinbase", true, oneFrac, new Fraction(1, 1000), fee);
+		orderGraph.addEdge(Currency.USD, Currency.BTC, "coinbase", true, oneFrac, new Fraction(500), fee);
+		return orderGraph;
+	}
+	
 	// Tests cached partial solutions if implemented (ETH) and multiple equivalence classes otherwise
 	private OrderGraph buildTestOrderGraph2() {
 		OrderGraph orderGraph = new OrderGraph();
@@ -100,7 +119,7 @@ public class OrderBookAnalyzerTest {
 	public void testSearchForArbitrageSimple() {
 		OrderGraph sharedOrderGraph = buildTestOrderGraph1();
 		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 100, new MockAnalysisHandler());
-		AnalysisResult analysisResult = analyzer.searchForArbitrage();
+		AnalysisResult analysisResult = analyzer.searchForArbitrageBellmanFord();
 		assertEquals(new Fraction(1000).multiply(new Fraction(1, 10)).multiply(new Fraction(1, 20)),
 				analysisResult.maxRatio);
 		Fraction fee = new Fraction(0);
@@ -112,11 +131,17 @@ public class OrderBookAnalyzerTest {
 		assertEquals(expectedTradesOnBestPath, analysisResult.tradesToExecute);
 		
 		OrderBookAnalyzer shortPathAnalyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 2, new MockAnalysisHandler());
-		analysisResult = shortPathAnalyzer.searchForArbitrage();
-		assertEquals(new Fraction(1), analysisResult.maxRatio);
+		analysisResult = shortPathAnalyzer.searchForArbitrageBellmanFord();
+		assertNull(analysisResult);
 		
-		TwoSidedGraphEdge e4 = new TwoSidedGraphEdge(Currency.USD, new GraphEdge("coinbase", Currency.BTC, true, oneFrac, new Fraction(1000), fee));
-		expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e3, e4}));
+		OrderGraph sharedOrderGraphWithPositiveShortPath = buildTestOrderGraph1WithPositiveShortPath();
+		shortPathAnalyzer = new OrderBookAnalyzer(sharedOrderGraphWithPositiveShortPath, Currency.USD, 2, new MockAnalysisHandler());
+		analysisResult = shortPathAnalyzer.searchForArbitrageBellmanFord();
+		assertEquals(new Fraction(2), analysisResult.maxRatio);
+		
+		TwoSidedGraphEdge e4 = new TwoSidedGraphEdge(Currency.BTC, new GraphEdge("coinbase", Currency.USD, true, oneFrac, new Fraction(1, 1000), fee));
+		TwoSidedGraphEdge e5 = new TwoSidedGraphEdge(Currency.USD, new GraphEdge("coinbase", Currency.BTC, true, oneFrac, new Fraction(500), fee));
+		expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e4, e5}));
 		assertEquals(expectedTradesOnBestPath, analysisResult.tradesToExecute);
 	}
 	
@@ -124,7 +149,7 @@ public class OrderBookAnalyzerTest {
 	public void testSearchForArbitrageMultiEquivalenceClassesPerCurrency(){
 		OrderGraph sharedOrderGraph = buildTestOrderGraph2();
 		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 100, new MockAnalysisHandler());
-		AnalysisResult analysisResult = analyzer.searchForArbitrage();
+		AnalysisResult analysisResult = analyzer.searchForArbitrageBellmanFord();
 		Fraction expectedMaxRatio = new Fraction(1, 2).multiply(new Fraction(7, 10)).multiply(new Fraction(2))
 				.multiply(new Fraction(100)).multiply(new Fraction(1)).multiply(new Fraction(100)).multiply(new Fraction(3, 100));
 		assertEquals(expectedMaxRatio, analysisResult.maxRatio);

@@ -1,6 +1,7 @@
 package BenTrapani.CryptoArbitrage;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -212,6 +213,98 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 		}
 		
 		return searchCtx.getAnalysisResult();
+	}
+	
+	protected AnalysisResult searchForArbitrageBellmanFord() 
+	{
+		OrderGraph orderGraphSnapshot = (OrderGraph)sharedOrderGraph.clone();
+		
+		HashMap<Currency, Fraction> distanceToVertex = new HashMap<Currency, Fraction>(); 
+		HashMap<Currency, TwoSidedGraphEdge> predecessor = new HashMap<Currency, TwoSidedGraphEdge>();
+		
+		List<Currency> vertices = orderGraphSnapshot.getVertices();
+		for (Currency vertex : vertices)
+		{
+			distanceToVertex.put(vertex, null);
+			predecessor.put(vertex, null);
+		}
+		
+		distanceToVertex.put(currencyToAccumulate, new Fraction(0, 1));
+		
+		Fraction neg1 = new Fraction(-1);
+		for (int i = 0; i < vertices.size() - 1; ++i) {
+			for (Currency vertex : vertices) {
+				final HashSet<TwoSidedGraphEdge> edgesFromVert = orderGraphSnapshot.getEdges(vertex);
+				for (TwoSidedGraphEdge graphEdge : edgesFromVert) {
+					Fraction distanceToU = distanceToVertex.get(vertex);
+					Fraction distanceToV = distanceToVertex.get(graphEdge.graphEdge.destCurrency);
+					Fraction weight = graphEdge.graphEdge.ratio.logLossy().multiply(neg1);
+					if (distanceToU != null) {
+						if (distanceToV == null || distanceToU.add(weight).compareTo(distanceToV) < 0) {
+							distanceToVertex.put(graphEdge.graphEdge.destCurrency, distanceToU.add(weight));
+							predecessor.put(graphEdge.graphEdge.destCurrency, graphEdge);
+						}
+					}
+				}
+			}
+		}
+		
+		AnalysisResult analysisResult = null;
+		for (Currency vertex : vertices)
+		{
+			final HashSet<TwoSidedGraphEdge> edgesFromVert = orderGraphSnapshot.getEdges(vertex);
+			for (TwoSidedGraphEdge graphEdge : edgesFromVert)
+			{
+				Fraction distanceToU = distanceToVertex.get(vertex);
+				Fraction distanceToV = distanceToVertex.get(graphEdge.graphEdge.destCurrency);
+				Fraction weight = graphEdge.graphEdge.ratio.logLossy().multiply(neg1);
+				if (distanceToU.add(weight).compareTo(distanceToV) < 0)
+				{
+					// This is a negative weight cycle, profit opportunity.
+					// Start at V and work backwards until we get back to a vertex we've seen before.
+					// Then start here and work around the loop to build a list of trades to execute.
+					Currency currentVertex = vertex;
+					HashSet<Currency> vertsVisited = new HashSet<Currency>();
+					while (!vertsVisited.contains(currentVertex))
+					{
+						vertsVisited.add(currentVertex);
+						currentVertex = predecessor.get(currentVertex).sourceCurrency;
+					}
+					HashSet<TwoSidedGraphEdge> tradesToExecute = new HashSet<TwoSidedGraphEdge>();
+					while (true)
+					{
+						TwoSidedGraphEdge tradeToExecute = predecessor.get(currentVertex);
+						if (tradesToExecute.contains(tradeToExecute))
+						{
+							break;
+						}
+						tradesToExecute.add(tradeToExecute);
+						currentVertex = tradeToExecute.sourceCurrency;
+					}
+					
+					if (tradesToExecute.size() <= maxTrades) {
+						Fraction pathProd = new Fraction(1);
+						for (TwoSidedGraphEdge graphEdgeToExecute : tradesToExecute) {
+							pathProd = pathProd.multiply(graphEdgeToExecute.graphEdge.ratio);
+						}
+						if (pathProd.compareTo(new Fraction(1)) <= 0) {
+							throw new IllegalStateException("We goofed. The above code should never give "
+									+ "us a path with a final ratio that is less than or equal to 1");
+						}
+
+						final AnalysisResult analysisResultForThisPath = new AnalysisResult(pathProd, tradesToExecute);
+						if (analysisResult == null || analysisResult.compareTo(analysisResultForThisPath) < 0) {
+							analysisResult = analysisResultForThisPath;
+						}
+					}
+				}
+			}
+		}
+		if (analysisResult == null)
+		{
+			analysisResult = new AnalysisResult(new Fraction(0), null);
+		}
+		return analysisResult;
 	}
 	
 	public void onOrderGraphChanged() {

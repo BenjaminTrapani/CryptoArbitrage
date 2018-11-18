@@ -2,6 +2,7 @@ package BenTrapani.CryptoArbitrage;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 
 /***
  * 
@@ -76,6 +77,14 @@ public class Fraction implements Comparable<Fraction> {
 	public Fraction subtract(Fraction other) {
 		FractionPairWithCommonDenominator fracPair = new FractionPairWithCommonDenominator(this, other);
 		return new Fraction(fracPair.numerator1.subtract(fracPair.numerator2), fracPair.commonDenominator);
+	}
+	
+	// This converts to double, and will reduce precision. 
+	// The precision will be reduced so that the ratio expressed is smaller than it really is.
+	public Fraction logLossy() {
+		BigDecimal divResult = new BigDecimal(numerator).divide(new BigDecimal(denominator), 20, RoundingMode.DOWN);
+		double doubleDivRes = divResult.doubleValue();
+		return new Fraction(new BigDecimal(Math.log(doubleDivRes)));
 	}
 	
 	public Fraction max(Fraction other) {

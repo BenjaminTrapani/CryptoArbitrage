@@ -1,7 +1,9 @@
 package BenTrapani.CryptoArbitrage;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.List;
 
 import org.knowm.xchange.currency.Currency;
 
@@ -193,7 +195,15 @@ public class OrderGraph implements Cloneable {
 		}
 		return false;
 	}
-
+	
+	public List<Currency> getVertices()
+	{
+		synchronized(graphSet)
+		{
+			return (List<Currency>) Collections.list(graphSet.keys());
+		}
+	}
+	
 	public HashSet<TwoSidedGraphEdge> getEdges(Currency source) {
 		synchronized(graphSet){
 			HashSet<GraphEdge> edgesForCurrency = graphSet.get(source);
