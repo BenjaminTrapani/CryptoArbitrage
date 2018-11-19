@@ -138,7 +138,7 @@ public class OrderBookAggregator {
 					numBestAsks);
 			OrderBookDiff diff;
 				diff = new OrderBookDiff(prevOrderBook, newKBest);
-				//System.out.println("Got order book update from exchange " + exchangeName + " on thread " + Thread.currentThread().getId());
+				System.out.println("Got order book update from exchange " + exchangeName + " on thread " + Thread.currentThread().getId());
 
 				List<LimitOrder> deletions = diff.getDeletions();
 				List<LimitOrder> additions = diff.getAdditions();

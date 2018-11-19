@@ -258,7 +258,8 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 				Fraction distanceToU = distanceToVertex.get(vertex);
 				Fraction distanceToV = distanceToVertex.get(graphEdge.graphEdge.destCurrency);
 				Fraction weight = graphEdge.graphEdge.ratio.logLossy().multiply(neg1);
-				if (distanceToU.add(weight).compareTo(distanceToV) < 0)
+				if (distanceToU != null && distanceToV != null && 
+						distanceToU.add(weight).compareTo(distanceToV) < 0)
 				{
 					// This is a negative weight cycle, profit opportunity.
 					// Start at V and work backwards until we get back to a vertex we've seen before.

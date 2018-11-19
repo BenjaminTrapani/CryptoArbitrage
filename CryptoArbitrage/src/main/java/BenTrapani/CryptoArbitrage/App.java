@@ -22,6 +22,7 @@ import info.bitrich.xchangestream.binance.BinanceStreamingExchange;
 import info.bitrich.xchangestream.hitbtc.HitbtcStreamingExchange;
 import info.bitrich.xchangestream.wex.WexStreamingExchange;
 import info.bitrich.xchangestream.cexio.CexioStreamingExchange;
+import info.bitrich.xchangestream.bitflyer.BitflyerStreamingExchange;
 
 public class App 
 {
@@ -35,19 +36,20 @@ public class App
 			System.err.println("Error loading API keys from config file: " + e.toString());
 			e.printStackTrace();
 		}
-    	// Binance (done)
-    	// Kraken (done)
-    	// HitBTC 
-    	// Bitfinex (done)
-    	// GDAX (done)
-    	// Gemini (done)
+    	// Notes on APIs tried
+		// Hitbtc works well
+		// Bitfinex works well
+		// Wex API works, but the exchange has weird things going on (don't use)
+		// Bitflyer API does not work (no market data coming through). This is due to no metadata for currencies. TODO add currency metadata and dynamic trading fees API.
     	//StreamingExchange binanceExch = StreamingExchangeFactory.INSTANCE.createExchange(BinanceStreamingExchange.class.getName());
     	StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
     	//StreamingExchange geminiExch = StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
     	StreamingExchange hitbtcExch = StreamingExchangeFactory.INSTANCE.createExchange(HitbtcStreamingExchange.class.getName());
-    	StreamingExchange wexExch = StreamingExchangeFactory.INSTANCE.createExchange(WexStreamingExchange.class.getName());
+    	//StreamingExchange wexExch = StreamingExchangeFactory.INSTANCE.createExchange(WexStreamingExchange.class.getName());
     	//StreamingExchange cexIOExch = StreamingExchangeFactory.INSTANCE.createExchange(CexioStreamingExchange.class.getName());
+    	StreamingExchange bitFlyer = StreamingExchangeFactory.INSTANCE.createExchange(BitflyerStreamingExchange.class.getName());
     	Exchange krakenExchange = ExchangeFactory.INSTANCE.createExchange(KrakenExchange.class.getName());
+    	 
     	
     	Exchange[] exchangeCollection = new Exchange[]{bitfinexExch, hitbtcExch, krakenExchange};
 		for (Exchange exch : exchangeCollection) {
@@ -59,7 +61,6 @@ public class App
 				System.out.println("Missing API keys for exchange " + exchangeName);
 				continue;
 			}
-			// make a function that executes the below, and then call for each exchange
 	    	ExchangeSpecification spec = exch.getExchangeSpecification();
 	    	spec.setApiKey(keyPair.apiKeyPair.publicKey);
 	    	spec.setSecretKey(keyPair.apiKeyPair.privateKey);
@@ -69,11 +70,12 @@ public class App
     	
     	StreamingExchangeSubset[] exchangeSubsets = new StreamingExchangeSubset[]{
     		//new StreamingExchangeAdapter(binanceExch),
-    		new StreamingExchangeAdapter(bitfinexExch),
+    		//new StreamingExchangeAdapter(bitfinexExch),
     		//new StreamingExchangeAdapter(xchangeGdx),
     		//new StreamingExchangeAdapter(geminiExch),
-    		new StreamingExchangeAdapter(hitbtcExch),
-    		new StreamingExchangeAdapter(wexExch),
+    		//new StreamingExchangeAdapter(hitbtcExch),
+    		new StreamingExchangeAdapter(bitFlyer),
+    		//new StreamingExchangeAdapter(wexExch),
     		//new StreamingExchangeAdapter(cexIOExch)
     		//new PollingExchangeAdapter(krakenExchange)
     	};

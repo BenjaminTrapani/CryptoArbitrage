@@ -16,8 +16,8 @@ public class CryptoArbitrageManager {
 	private ArrayList<Disposable> subscriptions; 
 	private StreamingExchangeSubset[] exchanges;
 	private OrderGraph orderGraph = new OrderGraph();
-	private ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor(new Fraction(1), Currency.USD);
-	private OrderBookAnalyzer orderBookAnalyzer = new OrderBookAnalyzer(orderGraph, Currency.USD, 4, arbitrageExecutor);
+	private ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor(new Fraction(1), Currency.BTC);
+	private OrderBookAnalyzer orderBookAnalyzer = new OrderBookAnalyzer(orderGraph, Currency.BTC, 4, arbitrageExecutor);
 	private OrderBookAggregator orderBookAggregator = new OrderBookAggregator(orderGraph, orderBookAnalyzer, 1, 1);
 	
 	public CryptoArbitrageManager(StreamingExchangeSubset[] exchanges) {
