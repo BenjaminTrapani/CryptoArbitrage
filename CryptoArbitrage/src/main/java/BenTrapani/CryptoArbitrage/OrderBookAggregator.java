@@ -228,14 +228,6 @@ public class OrderBookAggregator {
 		}
 		
 		for (CurrencyPair currencyPair : currenciesForExchange) {
-			// feeToTrade is a fraction by volume taker fee (fraction expressed in dest currency)
-			CurrencyPairMetaData metadataForPair = currencyPairToMeta.get(currencyPair);
-			if (metadataForPair == null ){
-				throw new IllegalStateException("Could not find metadata for currency pair " + currencyPair.toString());
-			}
-			
-			// TODO also account for min and max trade amounts
-			
 			BigDecimal currentTradingFee = null;
 			if (feeMap != null) {
 				Fee feeForPair = feeMap.get(currencyPair);
@@ -248,7 +240,13 @@ public class OrderBookAggregator {
 			}
 			if (currentTradingFee == null)
 			{
-				currentTradingFee = metadataForPair.getTradingFee();
+				// feeToTrade is a fraction by volume taker fee (fraction expressed in dest currency)
+				// TODO also account for min and max trade amounts
+				CurrencyPairMetaData metadataForPair = currencyPairToMeta.get(currencyPair);
+				if (metadataForPair != null)
+				{
+					currentTradingFee = metadataForPair.getTradingFee();
+				}
 				if (currentTradingFee == null) {
 					throw new IllegalStateException("Could not get fee to trade for exchange " +
 													exchangeName + 

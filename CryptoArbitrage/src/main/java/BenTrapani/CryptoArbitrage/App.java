@@ -41,17 +41,19 @@ public class App
 		// Bitfinex works well
 		// Wex API works, but the exchange has weird things going on (don't use)
 		// Bitflyer API does not work (no market data coming through). This is due to no metadata for currencies. TODO add currency metadata and dynamic trading fees API.
-    	//StreamingExchange binanceExch = StreamingExchangeFactory.INSTANCE.createExchange(BinanceStreamingExchange.class.getName());
-    	StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
+    	//	Update on bitflyer: should work and has dynamic fees (requires creating API key and test)
+		// Cexio: 
+		//StreamingExchange binanceExch = StreamingExchangeFactory.INSTANCE.createExchange(BinanceStreamingExchange.class.getName());
+    	//StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE.createExchange(BitfinexStreamingExchange.class.getName());
     	//StreamingExchange geminiExch = StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
-    	StreamingExchange hitbtcExch = StreamingExchangeFactory.INSTANCE.createExchange(HitbtcStreamingExchange.class.getName());
+    	//StreamingExchange hitbtcExch = StreamingExchangeFactory.INSTANCE.createExchange(HitbtcStreamingExchange.class.getName());
     	//StreamingExchange wexExch = StreamingExchangeFactory.INSTANCE.createExchange(WexStreamingExchange.class.getName());
-    	//StreamingExchange cexIOExch = StreamingExchangeFactory.INSTANCE.createExchange(CexioStreamingExchange.class.getName());
-    	StreamingExchange bitFlyer = StreamingExchangeFactory.INSTANCE.createExchange(BitflyerStreamingExchange.class.getName());
+    	StreamingExchange cexIOExch = StreamingExchangeFactory.INSTANCE.createExchange(CexioStreamingExchange.class.getName());
+    	//StreamingExchange bitFlyer = StreamingExchangeFactory.INSTANCE.createExchange(BitflyerStreamingExchange.class.getName());
     	Exchange krakenExchange = ExchangeFactory.INSTANCE.createExchange(KrakenExchange.class.getName());
     	 
     	
-    	Exchange[] exchangeCollection = new Exchange[]{bitfinexExch, hitbtcExch, krakenExchange};
+    	Exchange[] exchangeCollection = new Exchange[]{/*bitfinexExch, hitbtcExch,*/ krakenExchange};
 		for (Exchange exch : exchangeCollection) {
 			String exchangeName = exch.getExchangeSpecification().getExchangeName();
 			ExchangeKeyPair keyPair = null;
@@ -74,9 +76,9 @@ public class App
     		//new StreamingExchangeAdapter(xchangeGdx),
     		//new StreamingExchangeAdapter(geminiExch),
     		//new StreamingExchangeAdapter(hitbtcExch),
-    		new StreamingExchangeAdapter(bitFlyer),
+    		//new StreamingExchangeAdapter(bitFlyer),
     		//new StreamingExchangeAdapter(wexExch),
-    		//new StreamingExchangeAdapter(cexIOExch)
+    		new StreamingExchangeAdapter(cexIOExch)
     		//new PollingExchangeAdapter(krakenExchange)
     	};
     	

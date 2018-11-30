@@ -16,6 +16,9 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 	private OrderGraph sharedOrderGraph;
 	private Thread analyzerThread;
 	private Semaphore semaphore = new Semaphore(0);
+	// Currency to accumulate if using brute force algorithm, root of bellman ford search when using that.
+	// When using bellman ford, best to pick a currency that is exchangeable to almost all other currencies (USD or BTC) to
+	// increase likelihood of finding arbitrage path.
 	private Currency currencyToAccumulate;
 	private boolean shouldExit = false;
 	private int maxTrades;
