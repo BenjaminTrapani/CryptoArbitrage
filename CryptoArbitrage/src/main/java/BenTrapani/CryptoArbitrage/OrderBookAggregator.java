@@ -132,13 +132,13 @@ public class OrderBookAggregator {
 		@Override
 		public void accept(OrderBook orderBook) throws Exception {
 			synchronized (lockObj) {
-			KBestOrders newKBest = new KBestOrders(new ArrayList<LimitOrder>(orderBook.getBids()), 
-					new ArrayList<LimitOrder>(orderBook.getAsks()), 
-					numBestBids,
-					numBestAsks);
-			OrderBookDiff diff;
+        KBestOrders newKBest = new KBestOrders(new ArrayList<LimitOrder>(orderBook.getBids()), 
+            new ArrayList<LimitOrder>(orderBook.getAsks()), 
+            numBestBids,
+            numBestAsks);
+        OrderBookDiff diff;
 				diff = new OrderBookDiff(prevOrderBook, newKBest);
-				System.out.println("Got order book update from exchange " + exchangeName + " on thread " + Thread.currentThread().getId());
+				//System.out.println("Got order book update from exchange " + exchangeName + " on thread " + Thread.currentThread().getId());
 
 				List<LimitOrder> deletions = diff.getDeletions();
 				List<LimitOrder> additions = diff.getAdditions();
@@ -248,9 +248,10 @@ public class OrderBookAggregator {
 					currentTradingFee = metadataForPair.getTradingFee();
 				}
 				if (currentTradingFee == null) {
-					throw new IllegalStateException("Could not get fee to trade for exchange " +
-													exchangeName + 
-													" and currency pair " + currencyPair.toString());
+					//throw new IllegalStateException("Could not get fee to trade for exchange " +
+					//								exchangeName + 
+					//								" and currency pair " + currencyPair.toString());
+					currentTradingFee = BigDecimal.ZERO;
 				}
 			}
 			
@@ -258,9 +259,10 @@ public class OrderBookAggregator {
 			OrderBookConsumer orderBookConsumer = new OrderBookConsumer(numBestBids, 
 					numBestAsks, sharedOrderGraph, exchangeName, feeToTrade, currencyPair, orderGraphChangeHandler);
 			
-			//System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
 			disposablesPerCurrency[idx] = exchange.getOrderBook(currencyPair)
 												  .subscribe(orderBookConsumer);
+			System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
+			
 			idx++;
 		}
 		return disposablesPerCurrency;

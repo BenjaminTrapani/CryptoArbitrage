@@ -109,6 +109,37 @@ public class OrderBookAnalyzerTest {
 		return orderGraph;
 	}
 	
+	private OrderGraph buildDisjointLoopsTestGraph()
+	{
+		/*   
+		 * 
+		 *     ->DGC
+		 *    0.5    0.1
+		 *   /        \>
+		 * USD<---19---ETH
+		 * 
+		 * 		->XPM
+		 *    0.5    0.1
+		 *   /        \>
+		 * XRP<---22---LTC
+		 * 
+		 */
+		OrderGraph orderGraph = new OrderGraph();
+		Fraction fee = new Fraction(0);
+		Fraction oneFrac = new Fraction(1);
+		String testExch = "testExch";
+		
+		orderGraph.addEdge(Currency.USD, Currency.DGC, testExch, true, oneFrac, new Fraction(10, 5), fee);
+		orderGraph.addEdge(Currency.DGC, Currency.ETH, testExch, true, oneFrac, new Fraction(10, 1), fee);
+		orderGraph.addEdge(Currency.ETH, Currency.USD, testExch, true, oneFrac, new Fraction(1, 19), fee);
+		
+		orderGraph.addEdge(Currency.XRP, Currency.XPM, testExch, true, oneFrac, new Fraction(10, 5), fee);
+		orderGraph.addEdge(Currency.XPM, Currency.LTC, testExch, true, oneFrac, new Fraction(10, 1), fee);
+		orderGraph.addEdge(Currency.LTC, Currency.XRP, testExch, true, oneFrac, new Fraction(1, 22), fee);
+		
+		return orderGraph;
+	}
+	
 	private class MockAnalysisHandler implements OrderGraphAnalysisHandler {
 		@Override
 		public void onOrderBookAnalysisComplete(AnalysisResult analysisResult) {
@@ -132,7 +163,8 @@ public class OrderBookAnalyzerTest {
 		
 		OrderBookAnalyzer shortPathAnalyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 2, new MockAnalysisHandler());
 		analysisResult = shortPathAnalyzer.searchForArbitrageBellmanFord();
-		assertNull(analysisResult);
+		assertNull(analysisResult.tradesToExecute);
+		assertEquals(new Fraction(0), analysisResult.maxRatio);
 		
 		OrderGraph sharedOrderGraphWithPositiveShortPath = buildTestOrderGraph1WithPositiveShortPath();
 		shortPathAnalyzer = new OrderBookAnalyzer(sharedOrderGraphWithPositiveShortPath, Currency.USD, 2, new MockAnalysisHandler());
@@ -150,30 +182,20 @@ public class OrderBookAnalyzerTest {
 		OrderGraph sharedOrderGraph = buildTestOrderGraph2();
 		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(sharedOrderGraph, Currency.USD, 100, new MockAnalysisHandler());
 		AnalysisResult analysisResult = analyzer.searchForArbitrageBellmanFord();
-		Fraction expectedMaxRatio = new Fraction(1, 2).multiply(new Fraction(7, 10)).multiply(new Fraction(2))
-				.multiply(new Fraction(100)).multiply(new Fraction(1)).multiply(new Fraction(100)).multiply(new Fraction(3, 100));
+		Fraction expectedMaxRatio = new Fraction(400);
 		assertEquals(expectedMaxRatio, analysisResult.maxRatio);
 		// Resulting trades should be as follows
 		String testExch = "testExch";
 		Fraction fee = new Fraction(0);
 		Fraction oneFrac = new Fraction(1);
-		TwoSidedGraphEdge e1 = new TwoSidedGraphEdge(Currency.USD, new GraphEdge(testExch, Currency.DGC, true, 
-				oneFrac, new Fraction(10, 5), fee));
-		TwoSidedGraphEdge e2 = new TwoSidedGraphEdge(Currency.DGC, new GraphEdge(testExch, Currency.ETH, true, 
-				oneFrac, new Fraction(10, 7), fee));
-		TwoSidedGraphEdge e3 = new TwoSidedGraphEdge(Currency.ETH, new GraphEdge(testExch, Currency.BTC, true, 
-				oneFrac, new Fraction(1, 2), fee));
-		TwoSidedGraphEdge e4 = new TwoSidedGraphEdge(Currency.BTC, new GraphEdge(testExch, Currency.XRP, true, 
+		
+		TwoSidedGraphEdge e1 = new TwoSidedGraphEdge(Currency.ETH, new GraphEdge(testExch, Currency.XPM, true, 
 				oneFrac, new Fraction(1, 100), fee));
-		TwoSidedGraphEdge e5 = new TwoSidedGraphEdge(Currency.XRP, new GraphEdge(testExch, Currency.ETH, true, 
+		TwoSidedGraphEdge e2 = new TwoSidedGraphEdge(Currency.XPM, new GraphEdge(testExch, Currency.XRP, true, 
+				oneFrac, new Fraction(1, 4), fee));
+		TwoSidedGraphEdge e3 = new TwoSidedGraphEdge(Currency.XRP, new GraphEdge(testExch, Currency.ETH, true, 
 				oneFrac, new Fraction(1), fee));
-		TwoSidedGraphEdge e6 = new TwoSidedGraphEdge(Currency.ETH, new GraphEdge(testExch, Currency.XPM, true, 
-				oneFrac, new Fraction(1, 100), fee));
-		TwoSidedGraphEdge e7 = new TwoSidedGraphEdge(Currency.XPM, new GraphEdge(testExch, Currency.ETH, true, 
-				oneFrac, new Fraction(100, 3), fee));
-		TwoSidedGraphEdge e8 = new TwoSidedGraphEdge(Currency.ETH, new GraphEdge(testExch, Currency.USD, true, 
-				oneFrac, new Fraction(1), fee));
-		HashSet<TwoSidedGraphEdge> expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e1, e2, e3, e4, e5, e6, e7, e8}));
+		HashSet<TwoSidedGraphEdge> expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e1, e2, e3}));
 		assertEquals(expectedTradesOnBestPath, analysisResult.tradesToExecute);
 	}
 	
@@ -190,5 +212,32 @@ public class OrderBookAnalyzerTest {
 		analysisResult = noInitialCurrencyAnalyzer.searchForArbitrage();
 		assertTrue(analysisResult.maxRatio.compareTo(zeroFrac) < 0);
 		assertNull(analysisResult.tradesToExecute);
+	}
+	
+	@Test
+	public void testDisjointSearch() {
+		OrderGraph orderGraph = buildDisjointLoopsTestGraph();
+		OrderBookAnalyzer analyzer = new OrderBookAnalyzer(orderGraph, Currency.XRP, 100, new MockAnalysisHandler());
+		AnalysisResult analysisResult = analyzer.searchForArbitrageBellmanFord();
+		assertEquals(new Fraction(11, 10), analysisResult.maxRatio);
+		
+		String testExch = "testExch";
+		Fraction oneFrac = new Fraction(1);
+		Fraction fee = new Fraction(0);
+		
+		TwoSidedGraphEdge e1 = new TwoSidedGraphEdge(Currency.XRP, new GraphEdge(testExch, Currency.XPM, true, 
+				oneFrac, new Fraction(10, 5), fee));
+		TwoSidedGraphEdge e2 = new TwoSidedGraphEdge(Currency.XPM, new GraphEdge(testExch, Currency.LTC, true, 
+				oneFrac, new Fraction(10, 1), fee));
+		TwoSidedGraphEdge e3 = new TwoSidedGraphEdge(Currency.LTC, new GraphEdge(testExch, Currency.XRP, true, 
+				oneFrac, new Fraction(1, 22), fee));
+		HashSet<TwoSidedGraphEdge> expectedTradesOnBestPath = new HashSet<TwoSidedGraphEdge>(Arrays.asList(new TwoSidedGraphEdge[]{e1, e2, e3}));
+		
+		assertEquals(expectedTradesOnBestPath, analysisResult.tradesToExecute);
+		
+		analyzer = new OrderBookAnalyzer(orderGraph, Currency.USD, 100, new MockAnalysisHandler());
+		analysisResult = analyzer.searchForArbitrageBellmanFord();
+		assertNull(analysisResult.tradesToExecute);
+		assertEquals(new Fraction(0), analysisResult.maxRatio);
 	}
 }

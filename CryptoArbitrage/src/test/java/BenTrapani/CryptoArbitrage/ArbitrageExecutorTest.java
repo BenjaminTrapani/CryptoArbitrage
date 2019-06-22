@@ -228,7 +228,7 @@ public class ArbitrageExecutorTest {
 		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.DGC, testExch3), new Fraction(1022));
 		balanceDS.inMemoryDB.put(new MockBalanceDS.DSKey(Currency.LTC, testExch4), new Fraction(1));
 		
-		ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor(new Fraction(1), Currency.USD);
+		ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor(new Fraction(1));
 		List<ExecutableTrade> executableTrades = arbitrageExecutor.buildExecutableTrades(graphEdges, balanceDS);
 		assertEquals(4, executableTrades.size());
 		

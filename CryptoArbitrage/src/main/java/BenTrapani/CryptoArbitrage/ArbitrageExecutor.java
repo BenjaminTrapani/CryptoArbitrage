@@ -17,13 +17,11 @@ import org.knowm.xchange.currency.Currency;
 public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 	
 	private final Fraction minAcceptableRatio;
-	private final Currency tradePathSource;
 	private ConcreteCurrencyBalanceDS currencyBalanceDS;
 	private ReentrantLock currencyBalanceDSLock = new ReentrantLock();
 	
-	public ArbitrageExecutor(Fraction minAcceptableRatio, Currency tradePathSource) {
+	public ArbitrageExecutor(Fraction minAcceptableRatio) {
 		this.minAcceptableRatio = minAcceptableRatio;
-		this.tradePathSource = tradePathSource;
 	}
 	
 	public void setExchanges(StreamingExchangeSubset[] newExchanges) {
@@ -159,8 +157,10 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 			sourceCurrencyToGraphEdge.put(graphEdge.sourceCurrency, graphEdge.graphEdge);
 		}
 		
-		List<IntermediateTrade> orderedEdges = new ArrayList<IntermediateTrade>(graphEdges.size());
-		Currency prevCurrency = tradePathSource;
+    List<IntermediateTrade> orderedEdges = new ArrayList<IntermediateTrade>(graphEdges.size());
+    // Since the path forms a loop, ok to pick any source currency along the path as
+    // the initial currency.
+		Currency prevCurrency = graphEdges.iterator().next().sourceCurrency;
 		for (int i = 0; i < graphEdges.size(); ++i) {
 			GraphEdge nextEdge = sourceCurrencyToGraphEdge.get(prevCurrency);
 			orderedEdges.add(new IntermediateTrade(prevCurrency, nextEdge));
