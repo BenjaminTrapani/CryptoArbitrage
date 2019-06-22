@@ -234,20 +234,21 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 		
 		distanceToVertex.put(currencyToAccumulate, new Fraction(0, 1));
 		
-		Fraction neg1 = new Fraction(-1);
+    Fraction neg1 = new Fraction(-1);
+    Fraction zeroFrac = new Fraction(0);
 		for (int i = 0; i < vertices.size() - 1; ++i) {
 			for (Currency vertex : vertices) {
-				final HashSet<TwoSidedGraphEdge> edgesFromVert = orderGraphSnapshot.getEdges(vertex);
+				final HashSet<TwoSidedGraphEdge> edgesFromVert = orderGraphSnapshot.getEdgesWithNonzeroQuantity(vertex);
 				for (TwoSidedGraphEdge graphEdge : edgesFromVert) {
-					Fraction distanceToU = distanceToVertex.get(vertex);
-					Fraction distanceToV = distanceToVertex.get(graphEdge.graphEdge.destCurrency);
-					Fraction weight = graphEdge.graphEdge.ratio.logLossy().multiply(neg1);
-					if (distanceToU != null) {
-						if (distanceToV == null || distanceToU.add(weight).compareTo(distanceToV) < 0) {
-							distanceToVertex.put(graphEdge.graphEdge.destCurrency, distanceToU.add(weight));
-							predecessor.put(graphEdge.graphEdge.destCurrency, graphEdge);
-						}
-					}
+          Fraction distanceToU = distanceToVertex.get(vertex);
+          Fraction distanceToV = distanceToVertex.get(graphEdge.graphEdge.destCurrency);
+          Fraction weight = graphEdge.graphEdge.ratio.logLossy().multiply(neg1);
+          if (distanceToU != null) {
+            if (distanceToV == null || distanceToU.add(weight).compareTo(distanceToV) < 0) {
+              distanceToVertex.put(graphEdge.graphEdge.destCurrency, distanceToU.add(weight));
+              predecessor.put(graphEdge.graphEdge.destCurrency, graphEdge);
+            }
+          }
 				}
 			}
 		}
@@ -255,7 +256,7 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 		AnalysisResult analysisResult = null;
 		for (Currency vertex : vertices)
 		{
-			final HashSet<TwoSidedGraphEdge> edgesFromVert = orderGraphSnapshot.getEdges(vertex);
+			final HashSet<TwoSidedGraphEdge> edgesFromVert = orderGraphSnapshot.getEdgesWithNonzeroQuantity(vertex);
 			for (TwoSidedGraphEdge graphEdge : edgesFromVert)
 			{
 				Fraction distanceToU = distanceToVertex.get(vertex);

@@ -218,7 +218,16 @@ public class OrderGraph implements Cloneable {
 			return result;
 		}
 	}
-	
+  
+  public HashSet<TwoSidedGraphEdge> getEdgesWithNonzeroQuantity(Currency source) {
+    HashSet<TwoSidedGraphEdge> unfilteredEdgesFromSource = this.getEdges(source);
+    Fraction zeroFrac = new Fraction(0);
+    unfilteredEdgesFromSource.removeIf(graphEdge -> {
+      return graphEdge.graphEdge.quantity.compareTo(zeroFrac) <= 0;
+    });
+    return unfilteredEdgesFromSource;
+  }
+  
 	@SuppressWarnings("unchecked")
 	@Override
 	public Object clone() {

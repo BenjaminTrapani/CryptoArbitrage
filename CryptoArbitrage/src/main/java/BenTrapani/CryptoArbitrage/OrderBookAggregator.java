@@ -248,10 +248,9 @@ public class OrderBookAggregator {
 					currentTradingFee = metadataForPair.getTradingFee();
 				}
 				if (currentTradingFee == null) {
-					//throw new IllegalStateException("Could not get fee to trade for exchange " +
-					//								exchangeName + 
-					//								" and currency pair " + currencyPair.toString());
-					currentTradingFee = BigDecimal.ZERO;
+					throw new IllegalStateException("Could not get fee to trade for exchange " +
+							exchangeName + 
+              " and currency pair " + currencyPair.toString());
 				}
 			}
 			
