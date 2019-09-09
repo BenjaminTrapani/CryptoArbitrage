@@ -1,0 +1,30 @@
+[{
+	"exchange": "BitFinex",
+	"keys": {
+		"public": "cpzab9DhewFU0933XnmyAh38BC5WFAR7yUUX1MGstq0",
+		"secret": "pIyzTbibUWh2z3xzbzs9bo3uvn4rOxUvoIxr93LGQb5"
+	}
+},
+{
+	"exchange": "Binance",
+	"keys": {
+		"public": "JjF6Rd9ZTQCY7WT6NODR6RVLsaNppzIWJuc3lB4Vpo79kUyLqwBNxCup0hmq8zsi",
+		"secret": "mqfUM5dXZPum4zMnBEejFq9IrTATs1xAsqfXodhCuaXSuY83z21TITDLFEz39imY"
+	}
+},
+{
+  "exchange": "Gemini",
+  "keys":{
+    "public": "hVVpc6TAgJ0FVJcLhs59",
+    "secret": "vVsGAbb8bMtNQeSfbsQgFVPneY2"
+  }
+},
+{
+  "exchange": "Cex IO",
+  "username": "up122533042",
+  "keys":{
+    "public": "dup31Z1YHkCAoTFhbdzxQPQNnIY",
+    "secret": "fBO0v4Gsc3eoX1qHqKDahInihU"
+  }
+}
+]
