@@ -155,6 +155,10 @@ public class OrderBookAggregator {
 					}
 				}
 				for (LimitOrder addition : additions) {
+          if (addition.getRemainingAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("Negative remaining amount. Original qty: " +
+              addition.getOriginalAmount() + ", cumulative qty: " + addition.getCumulativeAmount());
+          }
 					sharedOrderGraph.addEdge(addition.getCurrencyPair().counter, addition.getCurrencyPair().base,
 							exchangeName, getIsLimitOrderBuyForUs(addition), 
 							new Fraction(addition.getRemainingAmount()),
@@ -232,7 +236,7 @@ public class OrderBookAggregator {
 			if (feeMap != null) {
 				Fee feeForPair = feeMap.get(currencyPair);
 				if (feeForPair == null) {
-					System.out.println("Missing maker taker fees for currency " + currencyPair.toString() + 
+					System.out.println("Missing dynamic maker taker fees for currency " + currencyPair.toString() + 
 							" on exchange " + exchangeName);
 				} else {
 					currentTradingFee = feeForPair.getTakerFee();
@@ -247,22 +251,25 @@ public class OrderBookAggregator {
 				{
 					currentTradingFee = metadataForPair.getTradingFee();
 				}
-				if (currentTradingFee == null) {
-					throw new IllegalStateException("Could not get fee to trade for exchange " +
-							exchangeName + 
-              " and currency pair " + currencyPair.toString());
-				}
 			}
-			
-			Fraction feeToTrade = new Fraction(currentTradingFee);
-			OrderBookConsumer orderBookConsumer = new OrderBookConsumer(numBestBids, 
-					numBestAsks, sharedOrderGraph, exchangeName, feeToTrade, currencyPair, orderGraphChangeHandler);
-			
-			disposablesPerCurrency[idx] = exchange.getOrderBook(currencyPair)
-												  .subscribe(orderBookConsumer);
-			System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
-			
-			idx++;
+			if (currentTradingFee == null) {
+        System.out.println("Could not get fee to trade for exchange " +
+            exchangeName + 
+            " and currency pair " + currencyPair.toString() + ", will not trade this pair");
+      } else {
+        Fraction feeToTrade = new Fraction(currentTradingFee);
+        OrderBookConsumer orderBookConsumer = new OrderBookConsumer(numBestBids, 
+            numBestAsks, sharedOrderGraph, exchangeName, feeToTrade, currencyPair, orderGraphChangeHandler);
+        try {
+          disposablesPerCurrency[idx] = exchange.getOrderBook(currencyPair)
+                            .subscribe(orderBookConsumer);
+          System.out.println("Exchange " + exchangeName + " subscribing to " + currencyPair);
+        
+          idx++;
+        } catch (Exception e) {
+          System.out.println("Exchange " + exchangeName + " failed to subscribe to " + currencyPair + ": " +e.toString());
+        }
+      }
 		}
 		return disposablesPerCurrency;
 	}

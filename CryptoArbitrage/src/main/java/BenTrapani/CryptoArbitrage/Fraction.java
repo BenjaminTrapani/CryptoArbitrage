@@ -37,7 +37,13 @@ public class Fraction implements Comparable<Fraction> {
 	
 	public Fraction(BigDecimal val) {
 		BigInteger unscaledValue = val.unscaledValue();
-		BigInteger tempDenom = BigInteger.TEN.pow(val.scale());
+    BigInteger tempDenom; 
+    if (val.scale() < 0) {
+      unscaledValue = unscaledValue.multiply(BigInteger.valueOf(val.scale() * -1));
+      tempDenom = BigInteger.ONE;
+    } else {
+      tempDenom = BigInteger.TEN.pow(val.scale());
+    }
 		BigIntPair reducedPair = computeReduced(unscaledValue, tempDenom);
 		numerator = reducedPair.n1;
 		denominator = reducedPair.n2;
