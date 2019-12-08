@@ -20,10 +20,9 @@ import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
 import info.bitrich.xchangestream.gemini.GeminiStreamingExchange;
 import info.bitrich.xchangestream.binance.BinanceStreamingExchange;
 import info.bitrich.xchangestream.hitbtc.HitbtcStreamingExchange;
-import info.bitrich.xchangestream.wex.WexStreamingExchange;
 import info.bitrich.xchangestream.cexio.CexioStreamingExchange;
 import info.bitrich.xchangestream.bitflyer.BitflyerStreamingExchange;
-import info.bitrich.xchangestream.bitstamp.BitstampStreamingExchange;
+import info.bitrich.xchangestream.bitstamp.v2.BitstampStreamingExchange;
 
 public class App 
 {
