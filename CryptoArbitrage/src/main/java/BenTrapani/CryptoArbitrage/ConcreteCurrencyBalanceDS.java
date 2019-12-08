@@ -20,7 +20,7 @@ public class ConcreteCurrencyBalanceDS implements ArbitrageExecutor.CurrencyBala
 		if (keyedExchange == null) {
 			throw new IllegalStateException("Exchange not found for name " + exchangeName);
 		}
-		//Fraction balanceAvailableForTrade = new Fraction(keyedExchange.getBalanceForCurrencyAvailableToTrade(currency));
-		return new Fraction(10000);
+		Fraction balanceAvailableForTrade = new Fraction(keyedExchange.getBalanceForCurrencyAvailableToTrade(currency));
+		return balanceAvailableForTrade;
 	}
 }

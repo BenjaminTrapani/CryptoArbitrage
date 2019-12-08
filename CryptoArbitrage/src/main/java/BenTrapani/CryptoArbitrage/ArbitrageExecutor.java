@@ -1,10 +1,15 @@
 package BenTrapani.CryptoArbitrage;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 
 import BenTrapani.CryptoArbitrage.OrderBookAnalyzer.AnalysisResult;
@@ -13,12 +18,15 @@ import BenTrapani.CryptoArbitrage.OrderGraph.TwoSidedGraphEdge;
 import BenTrapani.CryptoArbitrage.OrderGraphAnalysisHandler;
 
 import org.knowm.xchange.currency.Currency;
+import org.knowm.xchange.currency.CurrencyPair;
 
 public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
-	
 	private final Fraction minAcceptableRatio;
 	private ConcreteCurrencyBalanceDS currencyBalanceDS;
 	private ReentrantLock currencyBalanceDSLock = new ReentrantLock();
+	private Map<String, StreamingExchangeSubset> exchangeNameToSubset;
+	private long orderID = 1;
+	private final Duration orderRestDuration = Duration.ofSeconds(1);
 	
 	public ArbitrageExecutor(Fraction minAcceptableRatio) {
 		this.minAcceptableRatio = minAcceptableRatio;
@@ -28,6 +36,10 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 		currencyBalanceDSLock.lock();
 		this.currencyBalanceDS = new ConcreteCurrencyBalanceDS(newExchanges);
 		currencyBalanceDSLock.unlock();
+		this.exchangeNameToSubset = new HashMap<String, StreamingExchangeSubset>();
+		for (StreamingExchangeSubset exch : newExchanges) {
+			exchangeNameToSubset.put(exch.getExchangeName(), exch);
+		}
 	}
 	
 	public static interface CurrencyBalanceDS {
@@ -41,6 +53,7 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 		final Fraction quantity;
 		final Fraction price;
 		final boolean isBuy;
+		Optional<String> exchangeOrderID;
 		
 		public ExecutableTrade(IntermediateTrade intTrade, Fraction sourceQuantity) {
 			this.exchangeName = intTrade.graphEdge.exchangeName;
@@ -75,6 +88,7 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 		@Override
 		public String toString() {
 			return "Exchange name: " + exchangeName + "\n" +
+				   "exchange order ID: " + exchangeOrderID.toString() + "\n" +
 				   "base: " + base.toString() + "\n" + 
 				   "counter: " + counter.toString() + "\n " +
 				   "quantity: " + quantity.toString() + "\n" +
@@ -173,6 +187,51 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 		return convertToExecutableTrades(orderedEdges, loopCapacity);
 	}
 	
+	private void placeOrders(List<ExecutableTrade> trades) {
+		for (ExecutableTrade trade : trades) {
+			StreamingExchangeSubset subsetForTrade = exchangeNameToSubset.get(trade.exchangeName);
+			if (subsetForTrade == null) {
+				throw new IllegalStateException("No streaming exchange configured for trade: " + trade);
+			}
+			
+			trade.exchangeOrderID = subsetForTrade.placeLimitOrder(new CurrencyPair(trade.base, trade.counter), trade.isBuy, trade.price, 
+					trade.quantity, String.valueOf(orderID++));
+			
+			if (!trade.exchangeOrderID.isPresent()) {
+				System.out.println("Failed to place order for " + trade);
+			} else {
+				System.out.println("Placed order for trade " + trade);
+			}
+		}
+		
+		try {
+			Thread.sleep(orderRestDuration.toMillis());
+		} catch (InterruptedException e) {
+		}
+		
+		for (ExecutableTrade trade : trades) {
+			if (trade.exchangeOrderID.isPresent()) {
+				StreamingExchangeSubset subsetForTrade = exchangeNameToSubset.get(trade.exchangeName);
+				while (true) {
+					try {
+						if (subsetForTrade.cancelIfNotFilled(trade.exchangeOrderID.get())) {
+							System.out.println("Cancelling unfilled trade: " + trade);
+						} else {
+							System.out.println("Trade filled: " + trade);
+						}
+						break;
+					} catch (IOException e) {
+						System.out.println("Error canceling trade: " + trade + " Error: " + e.toString());
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException interruptedException) {
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	@Override
 	public void onOrderBookAnalysisComplete(AnalysisResult analysisResult) {
 		if (analysisResult.maxRatio.compareTo(minAcceptableRatio) > 0) {
@@ -187,9 +246,7 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 				executableTrades = buildExecutableTrades(analysisResult.tradesToExecute, currencyBalanceDS);
 			}
 			System.out.println(executableTrades.toString());
-			
-		}else {
-			System.out.println("No profitable trade found. Best ratio = " + analysisResult.maxRatio.convertToBigDecimal(5, BigDecimal.ROUND_DOWN));
+			placeOrders(executableTrades);
 		}
 	}
 }
