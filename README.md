@@ -24,7 +24,7 @@ The exchanges to trade on are configured in App.java. The more exchanges are add
 
 ## Trading Quick Start
 To get set up for trading, perform the following steps:
-1. Update APIKeys.json with your API keys for the exchanges that you plan to trade (see existing configs for example. They default API keys have been deactivated.)
+1. Update APIKeys.json with your API keys for the exchanges that you plan to trade (see existing configs for example. The default API keys have been deactivated.)
 2. Uncomment the commented block in ConcreteCurrencyBalanceDS.java and remove the initial return. This code will query your balance in a currency to be traded during computation of max loop quantity.
 3. Uncomment call to placeOrders in AribtrageExecutor.onOrderBookAnalysisComplete. This code will place limit orders for the trades printed to stdout.
 
