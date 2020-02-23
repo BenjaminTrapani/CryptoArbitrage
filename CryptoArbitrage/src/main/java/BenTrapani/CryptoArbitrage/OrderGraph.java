@@ -8,15 +8,16 @@ import java.util.List;
 import org.knowm.xchange.currency.Currency;
 
 public class OrderGraph implements Cloneable {
-	
+
 	public static class TwoSidedGraphEdge {
 		public final Currency sourceCurrency;
 		public final GraphEdge graphEdge;
+
 		public TwoSidedGraphEdge(Currency sourceCurrency, GraphEdge graphEdge) {
 			this.sourceCurrency = sourceCurrency;
 			this.graphEdge = graphEdge;
 		}
-		
+
 		@Override
 		public int hashCode() {
 			final int sourceCurrencyHashCode = sourceCurrency.hashCode();
@@ -34,17 +35,16 @@ public class OrderGraph implements Cloneable {
 				return false;
 			}
 			final TwoSidedGraphEdge other = (TwoSidedGraphEdge) obj;
-			return sourceCurrency.equals(other.sourceCurrency)
-					&& graphEdge.equals(other.graphEdge);
+			return sourceCurrency.equals(other.sourceCurrency) && graphEdge.equals(other.graphEdge);
 		}
-		
+
 		@Override
 		public String toString() {
 			String result = "sourceCurrency:" + sourceCurrency.toString() + graphEdge.toString();
 			return result;
 		}
 	}
-	
+
 	protected static class GraphEdge {
 		public final String exchangeName;
 		public final Currency destCurrency;
@@ -53,19 +53,20 @@ public class OrderGraph implements Cloneable {
 		public final Fraction price;
 		// Ratio is the amount of dest per unit source
 		public final Fraction ratio;
-		
+
 		// Quantity is specified in amount of base.
-		// Price is specified in amount of counter per unit base. 
-		// If this is a buy order, we go counter -> base, so ratio is 1 / price and quantity is in units destCurrency
-		// If this is a sell order, we go base -> counter, so ratio is price and quantity is in units sourceCurrency (defined outside of this class)
-		// TODO add dest quantity field that it is always in terms of destCurrency. 
-		// 	This way, dest quantity / ratio = amount destCurrency in terms of source currency, since ratio = quantity dest / quantity source
-		//  Quantity is always given in base. If sell, quantity * price = quantity counter = dest quantity, otherwise dest quantity = quantity.
-		public GraphEdge(String exchangeName, 
-				Currency destCurrency, 
-				boolean isBuy,
-				Fraction quantity,
-				Fraction price,
+		// Price is specified in amount of counter per unit base.
+		// If this is a buy order, we go counter -> base, so ratio is 1 / price
+		// and quantity is in units destCurrency
+		// If this is a sell order, we go base -> counter, so ratio is price and
+		// quantity is in units sourceCurrency (defined outside of this class)
+		// TODO add dest quantity field that it is always in terms of
+		// destCurrency.
+		// This way, dest quantity / ratio = amount destCurrency in terms of
+		// source currency, since ratio = quantity dest / quantity source
+		// Quantity is always given in base. If sell, quantity * price =
+		// quantity counter = dest quantity, otherwise dest quantity = quantity.
+		public GraphEdge(String exchangeName, Currency destCurrency, boolean isBuy, Fraction quantity, Fraction price,
 				Fraction feeFraction) {
 			this.exchangeName = exchangeName;
 			this.destCurrency = destCurrency;
@@ -74,17 +75,24 @@ public class OrderGraph implements Cloneable {
 			this.price = price;
 			Fraction unadjustedRatio = this.isBuy ? new Fraction(1).divide(this.price) : this.price;
 			// 1. ratio = unadjustedRatio * (1 - feeFraction)
-			// We lose feeFraction * unadjustedRatio dest per unit source due to fees, since
-			// unadjustedRatio is dest per unit source and fee can be considered taken out of dest.
-			// Show (source - (source * fee)) * unadjustedRatio = dest - (dest * fee)
-			// Since unadjustedRatio by definition is dest / unit source, we are done
-			// Show that (source - (source * fee)) * unadjustedRatio = source * (unadjustedRatio * (1 - fee))
-			// source * unadjustedRatio - source * fee * unadjustedRatio = source * unadjustedRatio * (1 - fee)
-			// Done, the two are equivalent. Can equivalently adjust source or dest by fee and get the same ratio,
+			// We lose feeFraction * unadjustedRatio dest per unit source due to
+			// fees, since
+			// unadjustedRatio is dest per unit source and fee can be considered
+			// taken out of dest.
+			// Show (source - (source * fee)) * unadjustedRatio = dest - (dest *
+			// fee)
+			// Since unadjustedRatio by definition is dest / unit source, we are
+			// done
+			// Show that (source - (source * fee)) * unadjustedRatio = source *
+			// (unadjustedRatio * (1 - fee))
+			// source * unadjustedRatio - source * fee * unadjustedRatio =
+			// source * unadjustedRatio * (1 - fee)
+			// Done, the two are equivalent. Can equivalently adjust source or
+			// dest by fee and get the same ratio,
 			// that is computed using formula 1.
 			this.ratio = unadjustedRatio.subtract(unadjustedRatio.multiply(feeFraction));
 		}
-		
+
 		@Override
 		public String toString() {
 			String result = " Exchange:" + exchangeName;
@@ -95,7 +103,7 @@ public class OrderGraph implements Cloneable {
 			result += " ratio:" + ratio.toString();
 			return result;
 		}
-		
+
 		@Override
 		public int hashCode() {
 			final int exchangeHashCode = exchangeName.hashCode();
@@ -103,12 +111,8 @@ public class OrderGraph implements Cloneable {
 			final int quantityHashCode = quantity.hashCode();
 			final int priceHashCode = price.hashCode();
 			final int ratioHashCode = ratio.hashCode();
-			final int hash = 59 * exchangeHashCode + 
-					47 * currencyHashCode +
-					197 * quantityHashCode + 
-					163 * priceHashCode + 
-					179 * ratioHashCode +
-					(this.isBuy ? 797 : 0);
+			final int hash = 59 * exchangeHashCode + 47 * currencyHashCode + 197 * quantityHashCode
+					+ 163 * priceHashCode + 179 * ratioHashCode + (this.isBuy ? 797 : 0);
 			return hash;
 		}
 
@@ -121,55 +125,51 @@ public class OrderGraph implements Cloneable {
 				return false;
 			}
 			final GraphEdge other = (GraphEdge) obj;
-			return exchangeName.compareTo(other.exchangeName) == 0 
-					&& destCurrency.equals(other.destCurrency) 
-					&& isBuy == other.isBuy 
-					&& quantity.equals(other.quantity)
-					&& price.equals(other.price)
+			return exchangeName.compareTo(other.exchangeName) == 0 && destCurrency.equals(other.destCurrency)
+					&& isBuy == other.isBuy && quantity.equals(other.quantity) && price.equals(other.price)
 					&& ratio.equals(other.ratio);
 		}
 	}
-	
+
 	private static class DirectedCurrencyPair {
 		public final Currency source;
 		public final Currency dest;
+
 		public DirectedCurrencyPair(Currency counter, Currency base, boolean isBuy) {
 			if (isBuy) {
 				source = counter;
 				dest = base;
-			}else {
+			} else {
 				source = base;
 				dest = counter;
 			}
 		}
 	}
-	
-	//Coarse locking on graphSet is used to avoid data races when updating graph
+
+	// Coarse locking on graphSet is used to avoid data races when updating
+	// graph
 	private Hashtable<Currency, HashSet<GraphEdge>> graphSet;
-	
-	public OrderGraph(){
+
+	public OrderGraph() {
 		graphSet = new Hashtable<Currency, HashSet<GraphEdge>>();
 	}
+
 	public OrderGraph(Hashtable<Currency, HashSet<GraphEdge>> graphSet) {
 		if (graphSet == null) {
 			throw new IllegalArgumentException("initial graph set cannot be null in copy constructor for OrderGraph");
 		}
 		this.graphSet = graphSet;
 	}
-	
-	//Call this after clearing all edges for an exchange that received an update. Add edges for all orders.
-	public void addEdge(Currency counter, 
-			Currency base, 
-			String exchangeName, 
-			boolean isBuyOrder,
-			Fraction quantity, 
-			Fraction price, 
-			Fraction feeFraction) {
-		
+
+	// Call this after clearing all edges for an exchange that received an
+	// update. Add edges for all orders.
+	public void addEdge(Currency counter, Currency base, String exchangeName, boolean isBuyOrder, Fraction quantity,
+			Fraction price, Fraction feeFraction) {
+
 		DirectedCurrencyPair currencyPair = new DirectedCurrencyPair(counter, base, isBuyOrder);
 		GraphEdge newEdge = new GraphEdge(exchangeName, currencyPair.dest, isBuyOrder, quantity, price, feeFraction);
-		
-		synchronized(graphSet) {
+
+		synchronized (graphSet) {
 			if (!graphSet.containsKey(currencyPair.source)) {
 				graphSet.put(currencyPair.source, new HashSet<GraphEdge>());
 			}
@@ -177,67 +177,61 @@ public class OrderGraph implements Cloneable {
 			edgesHere.add(newEdge);
 		}
 	}
-	
-	public boolean removeEdge(Currency counter, 
-			Currency base,
-			String exchangeName,
-			boolean isBuy, 
-			Fraction quantity,
-			Fraction price, 
-			Fraction feeFraction) {
+
+	public boolean removeEdge(Currency counter, Currency base, String exchangeName, boolean isBuy, Fraction quantity,
+			Fraction price, Fraction feeFraction) {
 		DirectedCurrencyPair mutablePair = new DirectedCurrencyPair(counter, base, isBuy);
-		synchronized(graphSet) { 
+		synchronized (graphSet) {
 			if (graphSet.containsKey(mutablePair.source)) {
 				HashSet<GraphEdge> edgesHere = graphSet.get(mutablePair.source);
-				GraphEdge edgeToRemove = new GraphEdge(exchangeName, mutablePair.dest, isBuy, quantity, price, feeFraction);
+				GraphEdge edgeToRemove = new GraphEdge(exchangeName, mutablePair.dest, isBuy, quantity, price,
+						feeFraction);
 				return edgesHere.remove(edgeToRemove);
 			}
 		}
 		return false;
 	}
-	
-	public List<Currency> getVertices()
-	{
-		synchronized(graphSet)
-		{
+
+	public List<Currency> getVertices() {
+		synchronized (graphSet) {
 			return (List<Currency>) Collections.list(graphSet.keys());
 		}
 	}
-	
+
 	public HashSet<TwoSidedGraphEdge> getEdges(Currency source) {
-		synchronized(graphSet){
+		synchronized (graphSet) {
 			HashSet<GraphEdge> edgesForCurrency = graphSet.get(source);
 			if (edgesForCurrency == null || edgesForCurrency.size() == 0) {
 				return null;
 			}
-			
+
 			HashSet<TwoSidedGraphEdge> result = new HashSet<TwoSidedGraphEdge>();
-			for (GraphEdge graphEdge: edgesForCurrency) {
+			for (GraphEdge graphEdge : edgesForCurrency) {
 				result.add(new TwoSidedGraphEdge(source, graphEdge));
 			}
 			return result;
 		}
 	}
-  
-  public HashSet<TwoSidedGraphEdge> getEdgesWithNonzeroQuantity(Currency source) {
-    HashSet<TwoSidedGraphEdge> unfilteredEdgesFromSource = this.getEdges(source);
-    if (unfilteredEdgesFromSource == null) {
-    	return unfilteredEdgesFromSource;
-    }
-    Fraction zeroFrac = new Fraction(0);
-    unfilteredEdgesFromSource.removeIf(graphEdge -> {
-      return graphEdge.graphEdge.quantity.compareTo(zeroFrac) <= 0;
-    });
-    return unfilteredEdgesFromSource;
-  }
-  
+
+	public HashSet<TwoSidedGraphEdge> getEdgesWithNonzeroQuantity(Currency source) {
+		HashSet<TwoSidedGraphEdge> unfilteredEdgesFromSource = this.getEdges(source);
+		if (unfilteredEdgesFromSource == null) {
+			return unfilteredEdgesFromSource;
+		}
+		Fraction zeroFrac = new Fraction(0);
+		unfilteredEdgesFromSource.removeIf(graphEdge -> {
+			return graphEdge.graphEdge.quantity.compareTo(zeroFrac) <= 0;
+		});
+		return unfilteredEdgesFromSource;
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public Object clone() {
 		Hashtable<Currency, HashSet<GraphEdge>> graphSetDup = new Hashtable<Currency, HashSet<GraphEdge>>();
-		synchronized(graphSet) {
-			for (Currency k: graphSet.keySet()) {
-				graphSetDup.put(k, (HashSet<GraphEdge>)graphSet.get(k).clone());
+		synchronized (graphSet) {
+			for (Currency k : graphSet.keySet()) {
+				graphSetDup.put(k, (HashSet<GraphEdge>) graphSet.get(k).clone());
 			}
 		}
 		return new OrderGraph(graphSetDup);

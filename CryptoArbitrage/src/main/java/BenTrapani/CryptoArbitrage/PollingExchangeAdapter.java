@@ -32,7 +32,8 @@ public class PollingExchangeAdapter extends StreamingExchangeSubset {
 		shouldPollingThreadsRun = true;
 		RateLimit[] rateLimits = exchange.getExchangeMetaData().getPublicRateLimits();
 		int numCurrencyPairs = getCurrencyPairs().size();
-		// Multiply by numCurrencyPairs here because we will hit the API numCurrencyPairs times per delay interval
+		// Multiply by numCurrencyPairs here because we will hit the API
+		// numCurrencyPairs times per delay interval
 		long delayMillis = ExchangeMetaData.getPollDelayMillis(rateLimits) * numCurrencyPairs;
 		return Observable.<OrderBook>create(e -> {
 			Thread pollingThread = new Thread() {
@@ -40,7 +41,7 @@ public class PollingExchangeAdapter extends StreamingExchangeSubset {
 					while (shouldPollingThreadsRun) {
 						OrderBook orderBookSnapshot = null;
 						try {
-							synchronized(exchange) {
+							synchronized (exchange) {
 								orderBookSnapshot = exchange.getMarketDataService().getOrderBook(currencyPair);
 							}
 						} catch (IOException e1) {
@@ -61,13 +62,13 @@ public class PollingExchangeAdapter extends StreamingExchangeSubset {
 					}
 				}
 			};
-			synchronized(pollingThreads) {
+			synchronized (pollingThreads) {
 				pollingThreads.add(pollingThread);
 			}
 			pollingThread.start();
 		}).doOnDispose(() -> {
 			shouldPollingThreadsRun = false;
-			synchronized(pollingThreads) {
+			synchronized (pollingThreads) {
 				for (Thread pollingThread : pollingThreads) {
 					pollingThread.join();
 				}

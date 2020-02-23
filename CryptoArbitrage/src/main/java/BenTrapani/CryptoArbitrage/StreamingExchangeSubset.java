@@ -21,35 +21,35 @@ import io.reactivex.Observable;
 
 public abstract class StreamingExchangeSubset {
 	protected Exchange exchange;
-	
+
 	protected StreamingExchangeSubset(Exchange exchange) {
 		this.exchange = exchange;
 	}
-	
+
 	public Set<CurrencyPair> getCurrencyPairs() {
-		synchronized(exchange) {
+		synchronized (exchange) {
 			return exchange.getExchangeMetaData().getCurrencyPairs().keySet();
 		}
 	}
-	
+
 	public Map<CurrencyPair, CurrencyPairMetaData> getCurrencyPairMetadata() {
-		synchronized(exchange) {
+		synchronized (exchange) {
 			return exchange.getExchangeMetaData().getCurrencyPairs();
 		}
 	}
-	
+
 	public abstract void buildAndWait(ProductSubscriptionBuilder builder);
-	
+
 	public String getExchangeName() {
-		synchronized(exchange) {
+		synchronized (exchange) {
 			return exchange.getExchangeSpecification().getExchangeName();
 		}
 	}
-	
+
 	public BigDecimal getBalanceForCurrencyAvailableToTrade(Currency currency) {
 		AccountInfo accountInfo = null;
 		try {
-			synchronized(exchange) {
+			synchronized (exchange) {
 				accountInfo = exchange.getAccountService().getAccountInfo();
 			}
 		} catch (IOException e) {
@@ -57,13 +57,13 @@ public abstract class StreamingExchangeSubset {
 			e.printStackTrace();
 			return null;
 		}
-		synchronized(accountInfo) {
+		synchronized (accountInfo) {
 			return accountInfo.getWallet().getBalance(currency).getAvailable();
 		}
 	}
-	
+
 	public Map<CurrencyPair, Fee> getDynamicTradingFees() {
-		synchronized(exchange) {
+		synchronized (exchange) {
 			try {
 				return exchange.getAccountService().getDynamicTradingFees();
 			} catch (IOException e) {
@@ -72,25 +72,26 @@ public abstract class StreamingExchangeSubset {
 		}
 		return null;
 	}
-	
+
 	Optional<String> placeLimitOrder(CurrencyPair pair, boolean isBuy, Fraction price, Fraction quantity, String id) {
 		final CurrencyPairMetaData meta = exchange.getExchangeMetaData().getCurrencyPairs().get(pair);
 		final Integer priceScale = meta.getPriceScale();
 		final Integer quantityScale = meta.getBaseScale();
 		final int roundingMode = isBuy ? BigDecimal.ROUND_DOWN : BigDecimal.ROUND_UP;
 		try {
-			return Optional.of(exchange.getTradeService().placeLimitOrder(new LimitOrder(isBuy ? OrderType.BID : OrderType.ASK,
-					quantity.convertToBigDecimal(quantityScale, BigDecimal.ROUND_DOWN), 
-					pair, id, null, price.convertToBigDecimal(priceScale, roundingMode))));
+			return Optional.of(exchange.getTradeService()
+					.placeLimitOrder(new LimitOrder(isBuy ? OrderType.BID : OrderType.ASK,
+							quantity.convertToBigDecimal(quantityScale, BigDecimal.ROUND_DOWN), pair, id, null,
+							price.convertToBigDecimal(priceScale, roundingMode))));
 		} catch (IOException e) {
 			System.out.println("Error placing order: " + e.toString());
 			return Optional.empty();
 		}
 	}
-	
+
 	boolean cancelIfNotFilled(String exchangeOrderID) throws IOException {
 		return !exchange.getTradeService().cancelOrder(exchangeOrderID);
 	}
-	
+
 	public abstract Observable<OrderBook> getOrderBook(CurrencyPair currencyPair);
 }

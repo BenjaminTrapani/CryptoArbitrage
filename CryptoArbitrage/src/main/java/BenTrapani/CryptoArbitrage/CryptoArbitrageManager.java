@@ -13,19 +13,19 @@ import info.bitrich.xchangestream.core.ProductSubscription.ProductSubscriptionBu
 import io.reactivex.disposables.Disposable;
 
 public class CryptoArbitrageManager {
-	private ArrayList<Disposable> subscriptions; 
+	private ArrayList<Disposable> subscriptions;
 	private StreamingExchangeSubset[] exchanges;
 	private OrderGraph orderGraph = new OrderGraph();
 	private ArbitrageExecutor arbitrageExecutor = new ArbitrageExecutor(new Fraction(1));
 	private OrderBookAnalyzer orderBookAnalyzer = new OrderBookAnalyzer(orderGraph, Currency.BTC, 4, arbitrageExecutor);
 	private OrderBookAggregator orderBookAggregator = new OrderBookAggregator(orderGraph, orderBookAnalyzer, 1, 1);
-	
+
 	public CryptoArbitrageManager(StreamingExchangeSubset[] exchanges) {
 		subscriptions = new ArrayList<Disposable>(exchanges.length);
-		for (StreamingExchangeSubset exchange: exchanges) {
+		for (StreamingExchangeSubset exchange : exchanges) {
 			Set<CurrencyPair> currenciesForExchange = exchange.getCurrencyPairs();
 			ProductSubscriptionBuilder builder = ProductSubscription.create();
-			for (CurrencyPair currencyPair: currenciesForExchange) {
+			for (CurrencyPair currencyPair : currenciesForExchange) {
 				builder = builder.addOrderbook(currencyPair);
 			}
 			exchange.buildAndWait(builder);
@@ -33,7 +33,7 @@ public class CryptoArbitrageManager {
 		this.exchanges = exchanges.clone();
 		arbitrageExecutor.setExchanges(exchanges);
 	}
-	
+
 	public void startArbitrage() {
 		stopArbitrage();
 		for (int i = 0; i < exchanges.length; i++) {
@@ -43,10 +43,14 @@ public class CryptoArbitrageManager {
 		}
 		orderBookAnalyzer.startAnalyzingOrderBook();
 	}
-	
+
 	public void stopArbitrage() {
-		for (Disposable disp: subscriptions) {
-			disp.dispose();
+		for (Disposable disp : subscriptions) {
+			try {
+				disp.dispose();
+			} catch (Exception e) {
+				System.out.println("Error disposing order book subscriber: " + e.toString());
+			}
 		}
 		try {
 			orderBookAnalyzer.stopAnalyzingOrderBook();
