@@ -238,6 +238,9 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 		for (int i = 0; i < vertices.size() - 1; ++i) {
 			for (Currency vertex : vertices) {
 				final HashSet<TwoSidedGraphEdge> edgesFromVert = orderGraphSnapshot.getEdgesWithNonzeroQuantity(vertex);
+        if (edgesFromVert == null) {
+            continue;
+        }
 				for (TwoSidedGraphEdge graphEdge : edgesFromVert) {
 					Fraction distanceToU = distanceToVertex.get(vertex);
 					Fraction distanceToV = distanceToVertex.get(graphEdge.graphEdge.destCurrency);
@@ -255,6 +258,9 @@ public class OrderBookAnalyzer implements OrderGraphChangeHandler {
 		AnalysisResult analysisResult = null;
 		for (Currency vertex : vertices) {
 			final HashSet<TwoSidedGraphEdge> edgesFromVert = orderGraphSnapshot.getEdgesWithNonzeroQuantity(vertex);
+      if (edgesFromVert == null) {
+          continue;
+      }
 			for (TwoSidedGraphEdge graphEdge : edgesFromVert) {
 				Fraction distanceToU = distanceToVertex.get(vertex);
 				Fraction distanceToV = distanceToVertex.get(graphEdge.graphEdge.destCurrency);
