@@ -225,6 +225,9 @@ public class OrderBookAggregator {
 			System.out.println("Dynamic trading fees unsupported for exchange " + exchangeName);
 		} catch (NotYetImplementedForExchangeException e) {
 			System.out.println("Dynamic trading fees unsupported for exchange " + exchangeName);
+		} catch (Exception e) {
+			System.out.println("Failed to fetch dynamic trading fees for exchange " + exchangeName + ": " + e
+					+ " Have you specified active API keys in APIKeys.json?");
 		}
 
 		for (CurrencyPair currencyPair : currenciesForExchange) {
