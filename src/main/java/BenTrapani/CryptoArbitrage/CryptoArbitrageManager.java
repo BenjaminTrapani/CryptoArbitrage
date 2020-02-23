@@ -31,11 +31,10 @@ public class CryptoArbitrageManager {
 			exchange.buildAndWait(builder);
 		}
 		this.exchanges = exchanges.clone();
-		arbitrageExecutor.setExchanges(exchanges);
+		arbitrageExecutor.setExchanges(this.exchanges);
 	}
 
 	public void startArbitrage() {
-		stopArbitrage();
 		for (int i = 0; i < exchanges.length; i++) {
 			Disposable[] tempDisposables = orderBookAggregator.createConsumerForExchange(exchanges[i]);
 			List<Disposable> subsList = new ArrayList<Disposable>(Arrays.asList(tempDisposables));
