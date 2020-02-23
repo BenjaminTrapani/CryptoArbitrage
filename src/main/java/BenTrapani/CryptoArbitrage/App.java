@@ -6,11 +6,11 @@ import java.util.Scanner;
 import org.knowm.xchange.Exchange;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
-import org.knowm.xchange.kraken.KrakenExchange;
 
 import BenTrapani.CryptoArbitrage.ExchangeAPIKeys.ExchangeKeyPair;
 import info.bitrich.xchangestream.bitfinex.BitfinexStreamingExchange;
 import info.bitrich.xchangestream.bitflyer.BitflyerStreamingExchange;
+import info.bitrich.xchangestream.kraken.KrakenStreamingExchange;
 import info.bitrich.xchangestream.bitstamp.v2.BitstampStreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchange;
 import info.bitrich.xchangestream.core.StreamingExchangeFactory;
@@ -39,8 +39,8 @@ public class App {
 		// Gemini: Buggy stream handling code as of 9/19
 		// StreamingExchange binanceExch =
 		// StreamingExchangeFactory.INSTANCE.createExchange(BinanceStreamingExchange.class.getName());
-		StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE
-				.createExchange(BitfinexStreamingExchange.class.getName());
+		/*StreamingExchange bitfinexExch = StreamingExchangeFactory.INSTANCE
+				.createExchange(BitfinexStreamingExchange.class.getName());*/
 		// StreamingExchange geminiExch =
 		// StreamingExchangeFactory.INSTANCE.createExchange(GeminiStreamingExchange.class.getName());
 		StreamingExchange hitbtcExch = StreamingExchangeFactory.INSTANCE
@@ -51,11 +51,11 @@ public class App {
 		// StreamingExchangeFactory.INSTANCE.createExchange(CexioStreamingExchange.class.getName());
 		StreamingExchange bitFlyer = StreamingExchangeFactory.INSTANCE
 				.createExchange(BitflyerStreamingExchange.class.getName());
-		Exchange krakenExchange = ExchangeFactory.INSTANCE.createExchange(KrakenExchange.class.getName());
+		StreamingExchange krakenExchange = StreamingExchangeFactory.INSTANCE.createExchange(KrakenStreamingExchange.class.getName());
 		StreamingExchange bitstampExch = StreamingExchangeFactory.INSTANCE
 				.createExchange(BitstampStreamingExchange.class.getName());
 
-		Exchange[] exchangeCollection = new Exchange[] { bitstampExch, bitFlyer, bitfinexExch, hitbtcExch,
+		Exchange[] exchangeCollection = new Exchange[] { bitstampExch, bitFlyer, /*bitfinexExch,*/ hitbtcExch,
 				krakenExchange/* , cexIOExch */ };
 		for (Exchange exch : exchangeCollection) {
 			String exchangeName = exch.getExchangeSpecification().getExchangeName();
@@ -78,13 +78,13 @@ public class App {
 
 		StreamingExchangeSubset[] exchangeSubsets = new StreamingExchangeSubset[] {
 				// new StreamingExchangeAdapter(binanceExch),
-				new StreamingExchangeAdapter(bitfinexExch),
+				//new StreamingExchangeAdapter(bitfinexExch),
 				// new StreamingExchangeAdapter(xchangeGdx),
 				// new StreamingExchangeAdapter(geminiExch),
 				new StreamingExchangeAdapter(hitbtcExch), new StreamingExchangeAdapter(bitFlyer),
 				// new StreamingExchangeAdapter(wexExch),
 				// new StreamingExchangeAdapter(cexIOExch),
-				new PollingExchangeAdapter(krakenExchange), new StreamingExchangeAdapter(bitstampExch) };
+				new StreamingExchangeAdapter(krakenExchange), new StreamingExchangeAdapter(bitstampExch) };
 
 		CryptoArbitrageManager manager = new CryptoArbitrageManager(exchangeSubsets);
 		manager.startArbitrage();
