@@ -1,8 +1,6 @@
 package BenTrapani.CryptoArbitrage;
 
 import static org.junit.Assert.*;
-
-import java.math.BigDecimal;
 import java.util.HashSet;
 
 import org.junit.Test;

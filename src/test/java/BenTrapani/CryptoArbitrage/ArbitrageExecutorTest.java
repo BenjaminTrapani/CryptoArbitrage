@@ -118,13 +118,6 @@ public class ArbitrageExecutorTest {
 	private static void verifyExecutableTradesWithExpectedUSDFlow(List<ExecutableTrade> executableTrades,
 			Fraction expectedPathFlowInUSD, String testExch1, String testExch2, String testExch3, String testExch4,
 			Fraction price1, Fraction price2, Fraction price3, Fraction price4) {
-		
-		// This much imprecision is introduced in quantity calculations
-		// If decimalScale = 20, testPrecision is 13, which isn't bad considering most exchanges
-		// don't support this precision anyway. 
-		// TODO use fractions instead of BigDecimals to avoid headache with numeric analysis
-		int testPrecision = CryptoConfigs.decimalScale - 7;
-
 		Fraction BTCPerUSD = new Fraction(1, 8330);
 		Fraction DGCPerUSD = BTCPerUSD.multiply(new Fraction(1021));
 		Fraction LTCPerUSD = DGCPerUSD.divide(new Fraction(1021));

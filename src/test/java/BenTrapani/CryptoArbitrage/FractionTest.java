@@ -1,6 +1,6 @@
 package BenTrapani.CryptoArbitrage;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -8,30 +8,30 @@ import java.math.BigInteger;
 import org.junit.Test;
 
 public class FractionTest {
-	
+
 	@Test
 	public void testInitAndReduce() {
 		Fraction longInit = new Fraction(1025);
 		assertEquals(BigInteger.valueOf(1025), longInit.numerator);
 		assertEquals(BigInteger.ONE, longInit.denominator);
-		
+
 		Fraction bigIntInit = new Fraction(BigInteger.valueOf(20145));
 		assertEquals(BigInteger.valueOf(20145), bigIntInit.numerator);
 		assertEquals(BigInteger.ONE, bigIntInit.denominator);
-		
+
 		Fraction unreduceableInit = new Fraction(BigInteger.valueOf(1284018), BigInteger.valueOf(12839));
 		assertEquals(BigInteger.valueOf(1284018), unreduceableInit.numerator);
 		assertEquals(BigInteger.valueOf(12839), unreduceableInit.denominator);
-		
+
 		Fraction reduceableInit = new Fraction(BigInteger.valueOf(123821120), BigInteger.valueOf(12845));
 		assertEquals(BigInteger.valueOf(123821120).divide(BigInteger.valueOf(5)), reduceableInit.numerator);
 		assertEquals(BigInteger.valueOf(12845).divide(BigInteger.valueOf(5)), reduceableInit.denominator);
-		
+
 		Fraction reduceableLargeDenom = new Fraction(BigInteger.valueOf(-5), BigInteger.valueOf(25));
 		assertEquals(BigInteger.valueOf(-1), reduceableLargeDenom.numerator);
 		assertEquals(BigInteger.valueOf(5), reduceableLargeDenom.denominator);
 	}
-	
+
 	@Test
 	public void testMultiplicationAndDivision() {
 		Fraction arg1 = new Fraction(BigInteger.valueOf(1024), BigInteger.valueOf(1280));
@@ -43,32 +43,32 @@ public class FractionTest {
 		// GCD = 256, so result is 204 / 505
 		assertEquals(BigInteger.valueOf(204), product1.numerator);
 		assertEquals(BigInteger.valueOf(505), product1.denominator);
-		
+
 		Fraction div1 = product1.divide(arg2);
 		Fraction div2 = product2.divide(arg1);
 		assertEquals(arg1, div1);
 		assertEquals(arg2, div2);
 	}
-	
+
 	@Test
 	public void testAdditionAndSubtraction() {
 		Fraction arg1 = new Fraction(BigInteger.valueOf(15), BigInteger.valueOf(23));
 		Fraction arg2 = new Fraction(BigInteger.valueOf(23), BigInteger.valueOf(37));
 		// arg1 = 15 * 37 / 851
 		// arg2 = 23 * 23 / 851
-		
+
 		Fraction arg1MArg2 = arg1.subtract(arg2);
 		assertEquals(new Fraction(BigInteger.valueOf(26), BigInteger.valueOf(851)), arg1MArg2);
-		
+
 		Fraction shouldBeArg1 = arg2.add(arg1MArg2);
 		assertEquals(shouldBeArg1, arg1);
-		
+
 		Fraction sum1 = arg1.add(arg2);
 		Fraction sum2 = arg2.add(arg1);
 		assertEquals(sum1, sum2);
 		assertEquals(new Fraction(BigInteger.valueOf(15 * 37 + 23 * 23), BigInteger.valueOf(851)), sum2);
 	}
-	
+
 	@Test
 	public void testEquals() {
 		Fraction a = new Fraction(BigInteger.valueOf(6), BigInteger.valueOf(42));
@@ -81,7 +81,7 @@ public class FractionTest {
 		Fraction negA = b.multiply(new Fraction(-1));
 		assertEquals(negB, negA);
 	}
-	
+
 	@Test
 	public void testCompareTo() {
 		Fraction a = new Fraction(BigInteger.valueOf(7), BigInteger.valueOf(25));
@@ -91,7 +91,7 @@ public class FractionTest {
 		assertEquals(-1, a.compareTo(b));
 		assertEquals(0, b.compareTo(b2));
 		assertEquals(0, b2.compareTo(b));
-		
+
 		Fraction negb = b.multiply(new Fraction(-1));
 		assertEquals(-1, negb.compareTo(a));
 		assertEquals(1, a.compareTo(negb));
@@ -99,7 +99,15 @@ public class FractionTest {
 		assertEquals(-1, negb.compareTo(negA));
 		assertEquals(1, negA.compareTo(negb));
 	}
-	
+
+	@Test
+	public void testCompareToOne() {
+		Fraction a = new Fraction(BigInteger.valueOf(11961), BigInteger.valueOf(11971));
+		Fraction b = new Fraction(1);
+		assertEquals(-1, a.compareTo(b));
+		assertEquals(1, b.compareTo(a));
+	}
+
 	@Test
 	public void testConvertToFromBigDecimal() {
 		Fraction a = new Fraction(new BigDecimal(11).divide(new BigDecimal(33), 5, BigDecimal.ROUND_DOWN));
@@ -107,9 +115,9 @@ public class FractionTest {
 		assertEquals(expected, a);
 		BigDecimal convertedBack = a.convertToBigDecimal(5, BigDecimal.ROUND_DOWN);
 		assertEquals(new BigDecimal(0.33333).setScale(5, BigDecimal.ROUND_DOWN), convertedBack);
-		
-		BigDecimal valueToTest = new BigDecimal(3).divide(new BigDecimal(7), 
-				CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
+
+		BigDecimal valueToTest = new BigDecimal(3).divide(new BigDecimal(7), CryptoConfigs.decimalScale,
+				BigDecimal.ROUND_DOWN);
 		Fraction fracRep = new Fraction(valueToTest);
 		BigDecimal testValBack = fracRep.convertToBigDecimal(CryptoConfigs.decimalScale, BigDecimal.ROUND_DOWN);
 		assertEquals(valueToTest, testValBack);
