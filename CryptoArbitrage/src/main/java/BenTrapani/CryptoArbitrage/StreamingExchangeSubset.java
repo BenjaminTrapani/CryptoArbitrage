@@ -67,7 +67,6 @@ public abstract class StreamingExchangeSubset {
 			try {
 				return exchange.getAccountService().getDynamicTradingFees();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -84,7 +83,6 @@ public abstract class StreamingExchangeSubset {
 					quantity.convertToBigDecimal(quantityScale, BigDecimal.ROUND_DOWN), 
 					pair, id, null, price.convertToBigDecimal(priceScale, roundingMode))));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			System.out.println("Error placing order: " + e.toString());
 			return Optional.empty();
 		}

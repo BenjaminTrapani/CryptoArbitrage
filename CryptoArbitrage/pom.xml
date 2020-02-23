@@ -90,7 +90,7 @@
 	<dependency>
     	<groupId>info.bitrich.xchange-stream</groupId>
     	<artifactId>xchange-bitflyer</artifactId>
-    	<version>4.3.17-SNAPSHOT</version>
+    	<version>4.4.0</version>
 	</dependency>
 	<dependency>
 		<groupId>info.bitrich.xchange-stream</groupId>

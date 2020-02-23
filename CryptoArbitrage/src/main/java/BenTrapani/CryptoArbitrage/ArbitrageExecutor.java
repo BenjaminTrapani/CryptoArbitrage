@@ -1,7 +1,6 @@
 package BenTrapani.CryptoArbitrage;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,7 +52,7 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 		final Fraction quantity;
 		final Fraction price;
 		final boolean isBuy;
-		Optional<String> exchangeOrderID;
+		Optional<String> exchangeOrderID = Optional.empty();
 		
 		public ExecutableTrade(IntermediateTrade intTrade, Fraction sourceQuantity) {
 			this.exchangeName = intTrade.graphEdge.exchangeName;
@@ -246,7 +245,9 @@ public class ArbitrageExecutor implements OrderGraphAnalysisHandler {
 				executableTrades = buildExecutableTrades(analysisResult.tradesToExecute, currencyBalanceDS);
 			}
 			System.out.println(executableTrades.toString());
-			placeOrders(executableTrades);
+			//placeOrders(executableTrades);
+		} else {
+			System.out.println("Best path ratio: " + analysisResult.maxRatio + " < minAcceptableRatio " + minAcceptableRatio);
 		}
 	}
 }

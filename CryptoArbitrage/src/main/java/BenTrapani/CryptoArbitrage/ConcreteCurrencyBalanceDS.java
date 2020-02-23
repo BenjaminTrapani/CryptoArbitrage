@@ -16,11 +16,12 @@ public class ConcreteCurrencyBalanceDS implements ArbitrageExecutor.CurrencyBala
 	
 	@Override
 	public Fraction getBalance(Currency currency, String exchangeName) {
-		StreamingExchangeSubset keyedExchange = streamingExchangeSubsetByName.get(exchangeName);
+		return new Fraction(100000, 1);
+		/*StreamingExchangeSubset keyedExchange = streamingExchangeSubsetByName.get(exchangeName);
 		if (keyedExchange == null) {
 			throw new IllegalStateException("Exchange not found for name " + exchangeName);
 		}
 		Fraction balanceAvailableForTrade = new Fraction(keyedExchange.getBalanceForCurrencyAvailableToTrade(currency));
-		return balanceAvailableForTrade;
+		return balanceAvailableForTrade;*/
 	}
 }
